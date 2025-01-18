@@ -22,7 +22,7 @@ the code.
 - Build a small web UI to manage the items in the database
 - Browsing and adding items in the web interface
 
-## Current states
+## Current state
 
 - Using a sqlite database
 - Basic functionality is done (adding album/track)
