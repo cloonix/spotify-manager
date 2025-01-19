@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto mt-8 px-4">
+    <h1 class="text-2xl font-bold mb-6">Tracks</h1>
+    {% if tracks %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">Artist</th>
+                    <th class="py-2 px-4 border-b text-left">Album</th>
+                    <th class="py-2 px-4 border-b text-left">Track</th>
+                    <th class="py-2 px-4 border-b text-left">Year</th>
+                    <th class="py-2 px-4 border-b text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for track in tracks %}
+                <tr class="hover:bg-gray-100">
+                    <td class="py-2 px-4 border-b">{{ track[1] }}</td>
+                    <td class="py-2 px-4 border-b">{{ track[2] }}</td>
+                    <td class="py-2 px-4 border-b"><a href="{{ track[5] }}" class="text-blue-500 hover:underline">{{ track[3] }}</a></td>
+                    <td class="py-2 px-4 border-b">{{ track[4] }}</td>
+                    <td class="py-2 px-4 border-b">
+                        <form action="{{ url_for('delete_track_route', track_id=track[0]) }}" method="POST" class="inline">
+                            <button type="submit" class="text-red-500 hover:underline delete-button" data-item-type="track">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-600">No tracks found.</p>
+    {% endif %}
+</div>
+{% endblock %}
