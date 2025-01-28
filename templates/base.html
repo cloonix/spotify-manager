@@ -5,35 +5,38 @@
     <title>Spotify Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    <nav class="bg-gray-800">
-        <ul class="flex space-x-2 p-2 items-center">
-            <li><a href="{{ url_for('index') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Home</a></li>
-            <li>
-                <button id="addItemButton" class="text-white hover:bg-gray-700 px-3 py-2 rounded inline-flex">Add Item</button>
-            </li>
-            <li><a href="{{ url_for('albums') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Albums</a></li>
-            <li><a href="{{ url_for('tracks') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Tracks</a></li>
-            <li><a href="{{ url_for('artists') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Artists</a></li>
-            <li class="relative">
-                <button id="settingsButton" class="text-white hover:bg-gray-700 px-3 py-2 rounded inline-flex items-center">
-                    Settings
-                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <ul id="settingsMenu" class="hidden absolute left-0 mt-3 w-48 bg-gray-800 rounded-md shadow-lg z-10 flex flex-col space-y-1 py-3 px-2">
-                    <li><a href="{{ url_for('export_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Export Database</a></li>
-                    <li><a href="{{ url_for('import_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Import Database</a></li>
-                    <li><a href="{{ url_for('cleanup_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Cleanup Database</a></li>
-                </ul>
-            </li>
-        </ul>
-    </nav>
+    <header>
+        <nav class="bg-gray-800" aria-label="Main Navigation">
+            <ul class="flex space-x-2 p-2 items-center">
+                <li><a href="{{ url_for('index') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Home</a></li>
+                <li>
+                    <button id="addItemButton" class="text-white hover:bg-gray-700 px-3 py-2 rounded inline-flex">Add Item</button>
+                </li>
+                <li><a href="{{ url_for('albums') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Albums</a></li>
+                <li><a href="{{ url_for('tracks') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Tracks</a></li>
+                <li><a href="{{ url_for('artists') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Artists</a></li>
+                <li class="relative">
+                    <button id="settingsButton" aria-haspopup="true" aria-expanded="false" class="text-white hover:bg-gray-700 px-3 py-2 rounded inline-flex items-center">
+                        Settings
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <ul id="settingsMenu" aria-label="Settings Menu" class="hidden absolute left-0 mt-3 w-48 bg-gray-800 rounded-md shadow-lg z-10 flex flex-col space-y-1 py-3 px-2" role="menu">
+                        <li><a href="{{ url_for('export_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Export Database</a></li>
+                        <li><a href="{{ url_for('import_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Import Database</a></li>
+                        <li><a href="{{ url_for('cleanup_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Cleanup Database</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </header>
 
-    <!-- Flash Messages -->
-    <div class="container mx-auto px-4 py-4">
+    <main class="container mx-auto px-4 py-4">
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -43,7 +46,7 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-    </div>
+    </main>
 
     <!-- Add Item Modal -->
     <div id="addItemModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
@@ -74,7 +77,7 @@
         </div>
     </div>
 
-    <!-- Modal Script -->
+    <!-- Combined Modal and Confirmation Scripts -->
     <script>
     document.getElementById('addItemButton').addEventListener('click', function() {
         document.getElementById('addItemModal').classList.remove('hidden');
@@ -84,10 +87,7 @@
     document.getElementById('closeModalButton').addEventListener('click', function() {
         document.getElementById('addItemModal').classList.add('hidden');
     });
-    </script>
 
-    <!-- Confirmation Modal Script -->
-    <script>
     let deleteForm = null;
 
     document.addEventListener('click', function(event) {
@@ -114,12 +114,14 @@
     document.getElementById('settingsButton').addEventListener('click', function(event) {
         event.stopPropagation(); // Prevent click from propagating to the document
         const menu = document.getElementById('settingsMenu');
-        menu.classList.toggle('hidden');
+        const isExpanded = menu.classList.toggle('hidden');
+        this.setAttribute('aria-expanded', !isExpanded);
     });
 
     // Hide the menu when clicking outside
     document.addEventListener('click', function() {
         document.getElementById('settingsMenu').classList.add('hidden');
+        document.getElementById('settingsButton').setAttribute('aria-expanded', 'false');
     });
     </script>
 
