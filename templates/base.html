@@ -16,9 +16,19 @@
             <li><a href="{{ url_for('albums') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Albums</a></li>
             <li><a href="{{ url_for('tracks') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Tracks</a></li>
             <li><a href="{{ url_for('artists') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Artists</a></li>
-            <li><a href="{{ url_for('export_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Export Database</a></li>
-            <li><a href="{{ url_for('import_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Import Database</a></li>
-            <li><a href="{{ url_for('cleanup_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-2 rounded">Cleanup Database</a></li>
+            <li class="relative">
+                <button id="settingsButton" class="text-white hover:bg-gray-700 px-3 py-2 rounded inline-flex items-center">
+                    Settings
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <ul id="settingsMenu" class="hidden absolute left-0 mt-3 w-48 bg-gray-800 rounded-md shadow-lg z-10 flex flex-col space-y-1 py-3 px-2">
+                    <li><a href="{{ url_for('export_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Export Database</a></li>
+                    <li><a href="{{ url_for('import_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Import Database</a></li>
+                    <li><a href="{{ url_for('cleanup_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Cleanup Database</a></li>
+                </ul>
+            </li>
         </ul>
     </nav>
 
@@ -99,6 +109,17 @@
         if (deleteForm) {
             deleteForm.submit();
         }
+    });
+
+    document.getElementById('settingsButton').addEventListener('click', function(event) {
+        event.stopPropagation(); // Prevent click from propagating to the document
+        const menu = document.getElementById('settingsMenu');
+        menu.classList.toggle('hidden');
+    });
+
+    // Hide the menu when clicking outside
+    document.addEventListener('click', function() {
+        document.getElementById('settingsMenu').classList.add('hidden');
     });
     </script>
 
