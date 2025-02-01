@@ -4,26 +4,34 @@
     <h1 class="text-3xl font-bold mb-4">Albums for Selected Genre</h1>
     <a href="{{ url_for('genres') }}" class="text-blue-500 hover:underline inline-block mb-4">&larr; Back to Genres</a>
     {% if albums %}
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead>
-            <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Album Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artist ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Release Year</th>
-            </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {% for album in albums %}
-            <tr>
-                <td class="px-6 py-4 whitespace-nowrap">{{ album[2] }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">{{ album[1] }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">{{ album[3] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white">
+          <thead class="bg-gray-200">
+              <tr>
+                  <th class="py-2 px-4 border-b text-left">Artist</th>
+                  <th class="py-2 px-4 border-b text-left">Album</th>
+                  <th class="py-2 px-4 border-b text-left">Year</th>
+                  <th class="py-2 px-4 border-b text-left">Actions</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for album in albums %}
+              <tr class="hover:bg-gray-100">
+                  <td class="py-2 px-4 border-b">{{ album[2] }}</td>
+                  <td class="py-2 px-4 border-b"><a href="{{ album[5] }}" class="text-blue-500 hover:underline">{{ album[3] }}</a></td>
+                  <td class="py-2 px-4 border-b">{{ album[4] }}</td>
+                  <td class="py-2 px-4 border-b">
+                      <form action="{{ url_for('delete_album_route', album_id=album[0]) }}" method="POST" class="inline">
+                          <button type="submit" class="text-red-500 hover:underline delete-button" data-item-type="album">Delete</button>
+                      </form>
+                  </td>
+              </tr>
+              {% endfor %}
+          </tbody>
+      </table>
+  </div>
     {% else %}
-    <p>No albums found for this genre.</p>
+    <p class="text-gray-600">No albums found for this genre.</p>
     {% endif %}
 </div>
 {% endblock %}

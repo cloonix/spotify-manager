@@ -432,17 +432,18 @@ def cleanup_unused_artists_and_genres():
 
 def search_albums_by_genre(genre_id):
     """
-    Searches for albums associated with artists of a specific genre.
+    Searches for albums associated with artists of a specific genre,
+    returning album details along with the artist name.
 
     :param genre_id: ID of the genre to filter albums.
-    :return: List of albums matching the criteria.
+    :return: List of albums matching the criteria, including artist name.
     """
     try:
         with sqlite3.connect(DATABASE_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT Albums.id, Albums.artist_id, Albums.name, Albums.release_year, Albums.uri, Albums.url
+                SELECT Albums.id, Albums.artist_id, Artists.name, Albums.name, Albums.release_year, Albums.uri, Albums.url
                 FROM Albums
                 JOIN Artists ON Albums.artist_id = Artists.id
                 JOIN ArtistGenres ON Artists.id = ArtistGenres.artist_id
