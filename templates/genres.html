@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mx-auto mt-8 px-4">
-    <h2 class="text-2xl font-bold mb-6">Genres</h1>
+    <h2 class="text-2xl font-bold mb-6">Genres</h2>
     <ul class="list-disc pl-6">
         {% for genre in genres %}
             <li>
-                <a href="{{ url_for('genre_albums', genre_id=genre[0]) }}" class="text-blue-500 hover:underline">
-                    {{ genre[1] }}
+                <a href="{{ url_for('genre_albums', genre_id=genre.id) }}" class="text-blue-500 hover:underline">
+                    {{ genre.name }}
                 </a>
             </li>
         {% endfor %}
