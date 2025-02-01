@@ -81,6 +81,16 @@ def artists():
     return render_template("artists.html", artists=artists_list)
 
 
+@app.route("/artist/<artist_id>/albums")
+def artist_albums(artist_id):
+    try:
+        albums_list = database.get_albums_by_artist(artist_id)
+        return render_template("artist_albums.html", albums=albums_list)
+    except Exception as e:
+        flash("Error fetching albums for the artist", "error")
+        return redirect(url_for("artists"))
+
+
 @app.route("/export")
 def export_database_route():
     """Exports the database to export.csv and sends it as a downloadable file."""
