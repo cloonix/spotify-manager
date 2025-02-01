@@ -5,6 +5,7 @@ from spotifyApi import get_album_info, get_track_info
 import database
 import os
 import tempfile
+import argparse  # Added import for argument parsing
 
 # Configure logging
 import logging
@@ -169,5 +170,15 @@ def genre_albums(genre_id):
 
 
 if __name__ == "__main__":
+    # Added argument parsing for the database location
+    parser = argparse.ArgumentParser(description="Spotify Manager App")
+    parser.add_argument(
+        "--database", required=True, help="Path to the SQLite database file"
+    )
+    args = parser.parse_args()
+
+    # Set the database path in the database module (adjust accordingly to your database module usage)
+    database.DB_PATH = args.database  # Assumes database module uses this variable
+
     database.create_tables()
     app.run(debug=True)

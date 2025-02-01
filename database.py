@@ -4,12 +4,13 @@ import csv
 from spotifyApi import get_artist_info
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_NAME = os.path.join(BASE_DIR, "spotify_manager.db")
+# Use DB_PATH variable that can be overridden by app.py; default if not provided.
+DB_PATH = os.path.join(BASE_DIR, "spotify_manager.db")
 
 
 def get_connection():
     """Return a new database connection with row factory set."""
-    conn = sqlite3.connect(DATABASE_NAME)
+    conn = sqlite3.connect(DB_PATH)  # Updated to use DB_PATH
     conn.row_factory = sqlite3.Row
     return conn
 
