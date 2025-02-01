@@ -2,11 +2,12 @@
 
 {% block content %}
 <div class="container mx-auto mt-8 px-4">
-    <h1 class="text-2xl font-bold mb-6">Albums</h1>
+    <!-- Updated heading to h1 with consistent styles -->
+    <h1 class="text-3xl font-bold mb-4">Albums</h1>
     {% if albums %}
     <div class="overflow-x-auto">
-        <table class="min-w-full bg-white">
-            <thead class="bg-gray-200">
+        <table class="min-w-full"> <!-- removed bg-white -->
+            <thead class="bg-gray-800"> <!-- changed from bg-gray-200 -->
                 <tr>
                     <th class="py-2 px-4 border-b text-left">Artist</th>
                     <th class="py-2 px-4 border-b text-left">Album</th>
@@ -16,7 +17,7 @@
             </thead>
             <tbody>
                 {% for album in albums %}
-                <tr class="hover:bg-gray-100">
+                <tr class="hover:bg-gray-700"> <!-- changed from hover:bg-gray-100 -->
                     <td class="py-2 px-4 border-b">
                         <a href="{{ url_for('artist_albums', artist_id=album.artist_id) }}" class="text-blue-500 hover:underline">
                             {{ album.artist_name }}
