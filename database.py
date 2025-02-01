@@ -428,3 +428,47 @@ def cleanup_unused_artists_and_genres():
             print("Cleanup completed successfully.\n")
     except sqlite3.Error as e:
         print(f"Error during cleanup: {e}\n")
+
+
+def search_albums_by_genre(genre_id):
+    """
+    Searches for albums associated with artists of a specific genre.
+
+    :param genre_id: ID of the genre to filter albums.
+    :return: List of albums matching the criteria.
+    """
+    try:
+        with sqlite3.connect(DATABASE_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT Albums.id, Albums.artist_id, Albums.name, Albums.release_year, Albums.uri, Albums.url
+                FROM Albums
+                JOIN Artists ON Albums.artist_id = Artists.id
+                JOIN ArtistGenres ON Artists.id = ArtistGenres.artist_id
+                JOIN Genres ON ArtistGenres.genre_id = Genres.id
+                WHERE Genres.id = ?
+                ORDER BY Albums.release_year ASC
+            """,
+                (genre_id,),
+            )
+            albums = cursor.fetchall()
+            return albums
+    except sqlite3.Error as e:
+        raise e
+
+
+def list_genres():
+    """
+    Retrieves all genres with their id and name.
+
+    :return: List of tuples (id, name) for all genres.
+    """
+    try:
+        with sqlite3.connect(DATABASE_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name FROM Genres ORDER BY name ASC")
+            genres = cursor.fetchall()
+            return genres
+    except sqlite3.Error as e:
+        raise e

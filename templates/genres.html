@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mx-auto mt-8 px-4">
+    <h1 class="text-3xl font-bold mb-4">Genres</h1>
+    <ul class="list-disc pl-6">
+        {% for genre in genres %}
+            <li>
+                <a href="{{ url_for('genre_albums', genre_id=genre[0]) }}" class="text-blue-500 hover:underline">
+                    {{ genre[1] }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

@@ -138,6 +138,26 @@ def delete_track_route(track_id):
     return redirect(url_for("tracks"))
 
 
+@app.route("/genres")
+def genres():
+    try:
+        genres_list = database.list_genres()
+        return render_template("genres.html", genres=genres_list)
+    except Exception as e:
+        flash("Error fetching genres", "error")
+        return redirect(url_for("index"))
+
+
+@app.route("/genres/<int:genre_id>/albums")
+def genre_albums(genre_id):
+    try:
+        albums = database.search_albums_by_genre(genre_id)
+        return render_template("genre_albums.html", albums=albums)
+    except Exception as e:
+        flash("Error fetching albums for the selected genre", "error")
+        return redirect(url_for("genres"))
+
+
 if __name__ == "__main__":
     database.create_tables()
     app.run(debug=True)
