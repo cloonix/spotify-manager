@@ -181,4 +181,4 @@ if __name__ == "__main__":
     database.DB_PATH = args.database  # Assumes database module uses this variable
 
     database.create_tables()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
