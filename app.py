@@ -42,28 +42,40 @@ def add_item():
         try:
             if "/album/" in spotify_url:
                 album_info = get_album_info(spotify_url)
-                if len(album_info) == 5:
-                    database.add_album(*album_info, spotify_url)
+                print(album_info)
+                if album_info and "album_id" in album_info:
+                    database.add_album(
+                        album_info["album_id"],
+                        album_info["artist_id"],
+                        album_info["album_name"],
+                        album_info["release_year"],
+                        album_info["album_uri"],
+                        spotify_url
+                    )
                 else:
                     flash("Invalid album information received.", "error")
                     return redirect(url_for("add_item"))
                 flash("Album added successfully.", "success")
                 return redirect(url_for("albums"))
-
             elif "/track/" in spotify_url:
                 track_info = get_track_info(spotify_url)
-                if len(track_info) == 6:
-                    database.add_track(*track_info, spotify_url)
+                if track_info and "track_id" in track_info:
+                    database.add_track(
+                        track_info["track_id"],
+                        track_info["artist_id"],
+                        track_info["album_id"],
+                        track_info["track_name"],
+                        track_info["release_year"],
+                        track_info["track_uri"],
+                        spotify_url
+                    )
                 else:
                     flash("Invalid track information received.", "error")
                     return redirect(url_for("add_item"))
                 flash("Track added successfully.", "success")
                 return redirect(url_for("tracks"))
             else:
-                flash(
-                    "Invalid Spotify URL. Please provide a valid Album or Track URL.",
-                    "error",
-                )
+                flash("Invalid Spotify URL. Please provide a valid Album or Track URL.", "error")
                 return redirect(url_for("add_item"))
         except IntegrityError:
             flash("Item already exists in the database.", "error")
@@ -182,3 +194,4 @@ if __name__ == "__main__":
 
     database.create_tables()
     app.run(host="0.0.0.0", port=5000, debug=True)
+

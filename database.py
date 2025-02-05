@@ -99,9 +99,14 @@ def add_artist(artist_id, cursor):
         cursor.execute("SELECT id FROM Artists WHERE id = ?", (artist_id,))
         if cursor.fetchone():
             return
-        # get_artist_info returns a tuple: (artist_id, name, genres, uri, external_urls)
+        # get_artist_info now returns a dictionary.
         artist_info = get_artist_info(artist_id)
-        artist_id, name, genres, uri, external_urls = artist_info
+        # Retrieve values from the dictionary
+        artist_id = artist_info["artist_id"]
+        name = artist_info["artist_name"]
+        genres = artist_info["genres"]
+        uri = artist_info["uri"]
+        external_urls = artist_info["external_urls"]
         cursor.execute(
             "INSERT INTO Artists (id, name, uri, url) VALUES (?, ?, ?, ?)",
             (artist_id, name, uri, external_urls.get("spotify", "")),
