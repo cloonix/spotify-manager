@@ -1,7 +1,6 @@
 import sqlite3
 import os
 import csv
-from spotifyApi import get_artist_info
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Use DB_PATH variable that can be overridden by app.py; default if not provided.
@@ -91,40 +90,34 @@ def add_genre(name, artist_id, cursor):
         raise e
 
 
-def add_artist(artist_id, cursor):
+def add_artist(artist_info, cursor):
     """
-    Checks for the artist and inserts it along with its genres if absent.
+    Inserts the artist record along with its genres if it does not exist.
+    Expects artist_info as a dictionary.
     """
-    try:
-        cursor.execute("SELECT id FROM Artists WHERE id = ?", (artist_id,))
-        if cursor.fetchone():
-            return
-        # get_artist_info now returns a dictionary.
-        artist_info = get_artist_info(artist_id)
-        # Retrieve values from the dictionary
-        artist_id = artist_info["artist_id"]
-        name = artist_info["artist_name"]
-        genres = artist_info["genres"]
-        uri = artist_info["uri"]
-        external_urls = artist_info["external_urls"]
-        cursor.execute(
-            "INSERT INTO Artists (id, name, uri, url) VALUES (?, ?, ?, ?)",
-            (artist_id, name, uri, external_urls.get("spotify", "")),
-        )
-        for genre in genres:
-            add_genre(genre, artist_id, cursor)
-    except sqlite3.Error as e:
-        raise e
+    artist_id = artist_info["artist_id"]
+    cursor.execute("SELECT id FROM Artists WHERE id = ?", (artist_id,))
+    if cursor.fetchone():
+        return
+    name = artist_info["artist_name"]
+    uri = artist_info["uri"]
+    external_urls = artist_info["external_urls"]
+    cursor.execute(
+        "INSERT INTO Artists (id, name, uri, url) VALUES (?, ?, ?, ?)",
+        (artist_id, name, uri, external_urls.get("spotify", "")),
+    )
+    for genre in artist_info["genres"]:
+        add_genre(genre, artist_id, cursor)
 
 
 def add_album(album_id, artist_id, album_name, release_year, uri, url):
     """
-    Inserts an album record after ensuring the artist record exists.
+    Inserts an album record. Assumes the artist record has been inserted already.
     """
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
-            add_artist(artist_id, cursor)
+            # Removed call to add_artist(); app.py must insert artist if needed.
             cursor.execute(
                 """INSERT INTO Albums (id, artist_id, name, release_year, uri, url)
                    VALUES (?, ?, ?, ?, ?, ?)""",
@@ -137,12 +130,12 @@ def add_album(album_id, artist_id, album_name, release_year, uri, url):
 
 def add_track(track_id, artist_id, album_id, track_name, release_year, uri, url):
     """
-    Inserts a track record after ensuring the artist record exists.
+    Inserts a track record. Assumes the artist record has been inserted already.
     """
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
-            add_artist(artist_id, cursor)
+            # Removed call to add_artist(); app.py must insert artist if needed.
             cursor.execute(
                 """INSERT INTO Tracks (id, artist_id, album_id, name, release_year, uri, url)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",

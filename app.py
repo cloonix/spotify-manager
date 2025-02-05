@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 from werkzeug.utils import secure_filename
 from sqlite3 import IntegrityError
-from spotifyApi import get_album_info, get_track_info
+from spotifyApi import get_album_info, get_track_info, get_artist_info
 import database
 import os
 import tempfile
@@ -44,6 +44,12 @@ def add_item():
                 album_info = get_album_info(spotify_url)
                 print(album_info)
                 if album_info and "album_id" in album_info:
+                    # Ensure artist is inserted
+                    artist_info = get_artist_info(album_info["artist_id"])
+                    with database.get_connection() as conn:
+                        cursor = conn.cursor()
+                        database.add_artist(artist_info, cursor)
+                        conn.commit()
                     database.add_album(
                         album_info["album_id"],
                         album_info["artist_id"],
@@ -60,6 +66,12 @@ def add_item():
             elif "/track/" in spotify_url:
                 track_info = get_track_info(spotify_url)
                 if track_info and "track_id" in track_info:
+                    # Ensure artist is inserted
+                    artist_info = get_artist_info(track_info["artist_id"])
+                    with database.get_connection() as conn:
+                        cursor = conn.cursor()
+                        database.add_artist(artist_info, cursor)
+                        conn.commit()
                     database.add_track(
                         track_info["track_id"],
                         track_info["artist_id"],
