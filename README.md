@@ -22,6 +22,10 @@ Maybe it's just me, but managing my favorite albums and tracks through the Spoti
 - [ ] Dockerize it
 - [ ] Better usability if the collection is getting bigger
 
+### Screenshot
+
+![Screenshot](screenshot.png)
+
 ## Installation  
 
 1. Get a spotify developer API key from: <https://developer.spotify.com/>
