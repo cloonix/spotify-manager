@@ -194,8 +194,8 @@ def genre_albums(genre_id):
         return redirect(url_for("genres"))
 
 
-@app.route("/download_db")
-def download_db():
+@app.route("/download_sqlite")
+def download_sqlite():
     try:
         return send_file(
             database.DB_PATH,
@@ -208,8 +208,8 @@ def download_db():
         return redirect(url_for("index"))
 
 
-@app.route("/import_sqlite", methods=["GET", "POST"])
-def import_sqlite():
+@app.route("/upload_sqlite", methods=["GET", "POST"])
+def upload_sqlite():
     if request.method == "POST":
         file = request.files.get("file")
         if file:
@@ -225,8 +225,8 @@ def import_sqlite():
             return redirect(url_for("index"))
         else:
             flash("No file provided.", "error")
-            return redirect(url_for("import_sqlite"))
-    return render_template("import_sqlite.html")
+            return redirect(url_for("upload_sqlite"))
+    return render_template("upload_sqlite.html")
 
 
 if __name__ == "__main__":
