@@ -29,8 +29,10 @@
                         </svg>
                     </button>
                     <ul id="settingsMenu" aria-label="Settings Menu" class="hidden absolute left-0 mt-3 w-48 bg-gray-800 rounded-md shadow-lg z-10 flex flex-col space-y-1 py-3 px-2" role="menu">
-                        <li><a href="{{ url_for('export_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Export Database</a></li>
-                        <li><a href="{{ url_for('import_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Import Database</a></li>
+                        <li><a href="{{ url_for('export_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Download CSV</a></li>
+                        <li><a href="{{ url_for('download_db') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Download SQLite</a></li>
+                        <li><a href="{{ url_for('import_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Import CSV</a></li>
+                        <li><a href="{{ url_for('import_sqlite') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Import SQLite</a></li>
                         <li><a href="{{ url_for('cleanup_database_route') }}" class="text-white hover:bg-gray-700 px-3 py-1 rounded">Cleanup Database</a></li>
                     </ul>
                 </li>

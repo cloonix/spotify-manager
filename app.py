@@ -6,6 +6,7 @@ import database
 import os
 import tempfile
 import argparse  # Added import for argument parsing
+import shutil             # <-- new import for cross-device file copy
 
 # Configure logging
 import logging
@@ -191,6 +192,41 @@ def genre_albums(genre_id):
     except Exception as e:
         flash("Error fetching albums for the selected genre", "error")
         return redirect(url_for("genres"))
+
+
+@app.route("/download_db")
+def download_db():
+    try:
+        return send_file(
+            database.DB_PATH,
+            as_attachment=True,
+            mimetype="application/x-sqlite3",
+            download_name=os.path.basename(database.DB_PATH)
+        )
+    except Exception as e:
+        flash("Error exporting database file", "error")
+        return redirect(url_for("index"))
+
+
+@app.route("/import_sqlite", methods=["GET", "POST"])
+def import_sqlite():
+    if request.method == "POST":
+        file = request.files.get("file")
+        if file:
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join(tempfile.gettempdir(), filename)
+            file.save(temp_path)
+            try:
+                shutil.copy(temp_path, database.DB_PATH)
+                os.remove(temp_path)
+                flash("SQLite database replaced successfully. A restart might be required.", "success")
+            except Exception as e:
+                flash(f"Error replacing database: {e}", "error")
+            return redirect(url_for("index"))
+        else:
+            flash("No file provided.", "error")
+            return redirect(url_for("import_sqlite"))
+    return render_template("import_sqlite.html")
 
 
 if __name__ == "__main__":
