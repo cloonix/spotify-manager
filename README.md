@@ -34,6 +34,6 @@ Maybe it's just me, but managing my favorite albums and tracks through the Spoti
 4. Create python environment with `python3 -m venv .venv`
 5. Activate your python environment!
 6. Install the pip requirements:`pip install -r requirements.txt`
-7. Start the app with `python app.py`
+7. Start the app with `python app.py` or with `gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app` (`pip install gunicorn`)
 
 The app will run at <http://127.0.0.1:5000>
