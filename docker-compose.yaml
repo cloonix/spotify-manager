@@ -2,6 +2,7 @@ version: "3.8"
 services:
   spotify:
     container_name: spotify
+    image: spotify-manager
     build:
       context: .
       dockerfile: Dockerfile
