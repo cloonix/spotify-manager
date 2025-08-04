@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
 import database
 import os
+import tempfile
 
 load_dotenv()
 
@@ -21,6 +23,15 @@ def extract_spotify_info(url):
     try:
         item_id = url.split("/")[-1].split("?")[0]
         
+        def build_artist_info(artist_data):
+            return {
+                "artist_id": artist_data["id"],
+                "artist_name": artist_data["name"],
+                "genres": artist_data["genres"],
+                "uri": artist_data["uri"],
+                "external_urls": artist_data["external_urls"]
+            }
+        
         if "/album/" in url:
             album = sp.album(item_id)
             artist = sp.artist(album["artists"][0]["id"])
@@ -33,13 +44,7 @@ def extract_spotify_info(url):
                 "release_year": int(album["release_date"].split("-")[0]),
                 "album_uri": album["uri"],
                 "url": url,
-                "artist_info": {
-                    "artist_id": artist["id"],
-                    "artist_name": artist["name"],
-                    "genres": artist["genres"],
-                    "uri": artist["uri"],
-                    "external_urls": artist["external_urls"]
-                }
+                "artist_info": build_artist_info(artist)
             }
         elif "/track/" in url:
             track = sp.track(item_id)
@@ -54,15 +59,9 @@ def extract_spotify_info(url):
                 "release_year": int(track["album"]["release_date"].split("-")[0]),
                 "track_uri": track["uri"],
                 "url": url,
-                "artist_info": {
-                    "artist_id": artist["id"],
-                    "artist_name": artist["name"],
-                    "genres": artist["genres"],
-                    "uri": artist["uri"],
-                    "external_urls": artist["external_urls"]
-                }
+                "artist_info": build_artist_info(artist)
             }
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -126,14 +125,8 @@ def delete_item(item_type, item_id):
 def export_database():
     """Export database to CSV file."""
     try:
-        from flask import send_file
         export_file = database.export_database_csv()
-        return send_file(
-            export_file, 
-            as_attachment=True, 
-            mimetype="text/csv", 
-            download_name="spotify_backup.csv"
-        )
+        return send_file(export_file, as_attachment=True, mimetype="text/csv", download_name="spotify_backup.csv")
     except Exception as e:
         flash(f"Error exporting database: {str(e)}", "error")
         return redirect(url_for("index"))
@@ -142,34 +135,23 @@ def export_database():
 def import_database():
     """Import database from CSV file."""
     if request.method == "POST":
-        if 'file' not in request.files:
-            flash("No file selected", "error")
-            return redirect(url_for("import_database"))
-        
-        file = request.files['file']
-        if file.filename == '':
-            flash("No file selected", "error")
-            return redirect(url_for("import_database"))
-        
-        if file and file.filename.endswith('.csv'):
-            try:
-                import tempfile
-                import os
-                from werkzeug.utils import secure_filename
-                
-                filename = secure_filename(file.filename)
-                temp_path = os.path.join(tempfile.gettempdir(), filename)
-                file.save(temp_path)
-                
-                database.import_database_csv(temp_path)
-                os.remove(temp_path)
-                
-                flash("Database imported successfully!", "success")
-                return redirect(url_for("browse"))
-            except Exception as e:
-                flash(f"Error importing database: {str(e)}", "error")
-        else:
+        file = request.files.get('file')
+        if not file or file.filename == '' or not file.filename.endswith('.csv'):
             flash("Please select a valid CSV file", "error")
+            return redirect(url_for("import_database"))
+        
+        try:
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join(tempfile.gettempdir(), filename)
+            file.save(temp_path)
+            
+            database.import_database_csv(temp_path)
+            os.remove(temp_path)
+            
+            flash("Database imported successfully!", "success")
+            return redirect(url_for("browse"))
+        except Exception as e:
+            flash(f"Error importing database: {str(e)}", "error")
     
     return render_template("import.html")
 
@@ -177,13 +159,7 @@ def import_database():
 def download_sqlite():
     """Download SQLite database file."""
     try:
-        from flask import send_file
-        return send_file(
-            database.DB_PATH,
-            as_attachment=True,
-            mimetype="application/x-sqlite3",
-            download_name="spotify_manager.db"
-        )
+        return send_file(database.DB_PATH, as_attachment=True, mimetype="application/x-sqlite3", download_name="spotify_manager.db")
     except Exception as e:
         flash(f"Error downloading database: {str(e)}", "error")
         return redirect(url_for("index"))

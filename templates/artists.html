@@ -1,24 +1,14 @@
+{% from 'macros.html' import page_header, empty_state %}
 {% extends "base.html" %}
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-white mb-2">Artists</h1>
-            <p class="text-gray-400">{{ artists|length }} artists in your collection</p>
-        </div>
-        
-        <!-- Search -->
-        <div class="relative" style="width: 16rem;">
-            <input type="text" id="artistSearch" placeholder="Search artists..." 
-                   class="input-modern" style="padding-left: 2.5rem;">
-            <div style="position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; padding-left: 0.75rem;">
-                <svg style="width: 1.25rem; height: 1.25rem; color: var(--color-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-            </div>
-        </div>
-    </div>
+    {{ page_header(
+        title="Artists",
+        count=artists|length ~ " artists in your collection",
+        search_id="artistSearch",
+        search_placeholder="Search artists..."
+    ) }}
 
     {% if artists %}
     <!-- Artists Grid -->
@@ -89,20 +79,12 @@
         {% endfor %}
     </div>
     {% else %}
-    <!-- Empty State -->
-    <div class="empty-state">
-        <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-        </svg>
-        <h3 class="empty-state-title">No artists yet</h3>
-        <p class="empty-state-description">Add some music to see your favorite artists here</p>
-        <button id="addItemButton" class="btn-primary">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add Music
-        </button>
-    </div>
+    {{ empty_state(
+        title="No artists yet",
+        description="Add some music to see your favorite artists here",
+        action_text="Add Music",
+        action_url="#"
+    ) }}
     {% endif %}
 </div>
 
@@ -128,81 +110,4 @@
     </div>
 </div>
 
-<script>
-// Search functionality
-const artistSearch = document.getElementById('artistSearch');
-const artistCards = document.querySelectorAll('.artist-card');
-
-artistSearch?.addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    
-    artistCards.forEach(card => {
-        const searchData = card.dataset.search;
-        if (searchData.includes(searchTerm)) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-});
-
-// Artist details modal
-function viewArtistDetails(artistId, artistName) {
-    const modal = document.getElementById('artistModal');
-    const title = document.getElementById('artistModalTitle');
-    const content = document.getElementById('artistModalContent');
-    
-    title.textContent = artistName;
-    content.innerHTML = '<div class="text-center text-gray-400 py-8">Loading artist details...</div>';
-    modal.classList.remove('hidden');
-    
-    // Simulate loading artist details (in a real app, this would fetch from an API)
-    setTimeout(() => {
-        content.innerHTML = `
-            <div class="space-y-4">
-                <div class="text-center">
-                    <div class="w-20 h-20 bg-gradient-spotify rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-white mb-2">${artistName}</h4>
-                </div>
-                
-                <div class="bg-dark-700 rounded-lg p-4">
-                    <h5 class="font-semibold text-white mb-2">Quick Actions</h5>
-                    <div class="space-y-2">
-                        <a href="/browse?search=${encodeURIComponent(artistName)}" class="block text-spotify hover:text-green-400 transition-colors">
-                            → View all tracks by this artist
-                        </a>
-                        <button onclick="searchSpotify('${artistName}')" class="block text-accent-400 hover:text-accent-300 transition-colors">
-                            → Search on Spotify
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="text-sm text-gray-400 text-center">
-                    More detailed artist analytics coming soon!
-                </div>
-            </div>
-        `;
-    }, 500);
-}
-
-function searchSpotify(artistName) {
-    window.open(`https://open.spotify.com/search/${encodeURIComponent(artistName)}`, '_blank');
-}
-
-// Close modal
-document.getElementById('closeArtistModal')?.addEventListener('click', function() {
-    document.getElementById('artistModal').classList.add('hidden');
-});
-
-// Close modal on backdrop click
-document.getElementById('artistModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        this.classList.add('hidden');
-    }
-});
-</script>
 {% endblock %}

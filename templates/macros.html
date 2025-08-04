@@ -1,0 +1,69 @@
+{# Reusable header component with title, subtitle, count, and optional search/filters #}
+{% macro page_header(title, subtitle=None, count=None, search_id=None, search_placeholder=None, filters=None) %}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-3xl font-bold text-white mb-2">{{ title }}</h1>
+        {% if subtitle or count is not none %}
+            <p class="text-gray-400">
+                {% if count is not none %}{{ count }}{% endif %}
+                {% if subtitle %}{{ subtitle }}{% endif %}
+            </p>
+        {% endif %}
+    </div>
+    
+    {% if search_id or filters %}
+    <div class="flex flex-col sm:flex-row gap-4">
+        {% if search_id %}
+        <!-- Search -->
+        <div class="relative" style="width: 16rem;">
+            <input type="text" id="{{ search_id }}" placeholder="{{ search_placeholder or 'Search...' }}" 
+                   class="input-modern" style="padding-left: 2.5rem;">
+            <div style="position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; padding-left: 0.75rem;">
+                <svg style="width: 1.25rem; height: 1.25rem; color: var(--color-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if filters %}
+        <!-- Filter Buttons -->
+        <div style="display: flex; background: var(--color-dark-800); border: 1px solid var(--color-dark-600); border-radius: 0.5rem; padding: 0.25rem;">
+            {% for filter in filters %}
+            <a href="{{ filter.url }}" class="filter-btn {{ 'active' if filter.active else '' }}">{{ filter.label }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Empty state component #}
+{% macro empty_state(title, description, action_text=None, action_url=None) %}
+<div class="card">
+    <div class="card-body text-center py-12">
+        <div class="w-16 h-16 mx-auto mb-4 bg-dark-700 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>
+            </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-white mb-2">{{ title }}</h3>
+        <p class="text-gray-400 mb-6">{{ description }}</p>
+        {% if action_text and action_url %}
+        <a href="{{ action_url }}" class="btn-primary">{{ action_text }}</a>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{# Delete button component #}
+{% macro delete_button(item_type, item_id, size='sm') %}
+<button onclick="deleteItem('{{ item_type }}', '{{ item_id }}')" 
+        class="btn-danger-{{ size }} hover:scale-110 transition-transform"
+        title="Delete {{ item_type }}">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+    </svg>
+</button>
+{% endmacro %}
