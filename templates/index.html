@@ -1,8 +1,122 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mx-auto mt-8 px-4">
-    <h1 class="text-3xl font-bold mb-4">Welcome to Spotify Manager</h1>
-    <p class="text-lg">Use the navigation bar to manage your Spotify data.</p>
-    <p><a href="https://github.com/cloonix/spotify-manager" class="text-blue-500 underline">View Project on GitHub</a></p>
+<div class="relative">
+    <!-- Hero Section -->
+    <div class="text-center py-20 animate-fade-in">
+        <!-- Main Heading -->
+        <div class="mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-spotify rounded-2xl mb-6 shadow-2xl">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>
+                </svg>
+            </div>
+            <h1 class="text-6xl font-bold text-white mb-4 tracking-tight">
+                Your Music, <span class="gradient-spotify bg-clip-text text-transparent">Organized</span>
+            </h1>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                Transform how you discover and organize your favorite Spotify tracks and albums. 
+                Simple, powerful, and beautifully designed.
+            </p>
+        </div>
+        
+        <!-- Quick Add Form -->
+        <div class="mb-12 max-w-lg mx-auto">
+            <form id="quickAddForm" class="space-y-4">
+                <div class="relative">
+                    <input type="url" id="quickSpotifyUrl" name="spotify_url" 
+                           class="input-modern text-center text-lg py-4 pr-16" 
+                           placeholder="Paste Spotify URL here..." 
+                           style="padding-right: 4rem;">
+                    <button type="submit" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-spotify hover:bg-green-600 text-white p-2 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 text-center">
+                    Simply paste any Spotify URL and press Enter ✨
+                </p>
+            </form>
+            
+            <!-- Or use the modal -->
+            <div class="text-center mt-6">
+                <span class="text-gray-500 text-sm">or</span>
+                <button id="addItemButton" class="block mx-auto mt-2 btn-secondary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Use Advanced Form
+                </button>
+            </div>
+        </div>
+        
+        <!-- Feature Cards -->
+        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
+            <div class="card animate-slide-up" style="animation-delay: 0.1s">
+                <div class="card-body text-center">
+                    <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-white mb-2">Instant Import</h3>
+                    <p class="text-gray-400 text-sm">Drop any Spotify URL and instantly get all the metadata</p>
+                </div>
+            </div>
+            
+            <div class="card animate-slide-up" style="animation-delay: 0.2s">
+                <div class="card-body text-center">
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-white mb-2">Smart Browse</h3>
+                    <p class="text-gray-400 text-sm">Filter and search through your collection effortlessly</p>
+                </div>
+            </div>
+            
+            <div class="card animate-slide-up" style="animation-delay: 0.3s">
+                <div class="card-body text-center">
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-white mb-2">Artist Focus</h3>
+                    <p class="text-gray-400 text-sm">Discover connections between artists and genres</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Section -->
+        <div class="border-t border-dark-600 pt-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-2xl mx-auto">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-spotify">🚀</div>
+                    <div class="text-gray-400 text-sm mt-2">Lightning Fast</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-accent-400">🎨</div>
+                    <div class="text-gray-400 text-sm mt-2">Beautiful UI</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-400">🔒</div>
+                    <div class="text-gray-400 text-sm mt-2">Privacy First</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-400">⚡</div>
+                    <div class="text-gray-400 text-sm mt-2">Real-time</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Background decoration -->
+    <div class="absolute inset-0 -z-10 overflow-hidden">
+        <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-spotify/5 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
+    </div>
 </div>
+
 {% endblock %}

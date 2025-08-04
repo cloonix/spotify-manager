@@ -1,0 +1,109 @@
+{% from 'macros.html' import page_header, empty_state, delete_button %}
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    {{ page_header(
+        title="Your Music Collection",
+        count=items|length ~ " total items",
+        search_id="searchInput",
+        search_placeholder="Search music...",
+        filters=[
+            {"label": "All", "url": "?type=all", "active": filter_type == 'all'},
+            {"label": "Albums", "url": "?type=album", "active": filter_type == 'album'},
+            {"label": "Tracks", "url": "?type=track", "active": filter_type == 'track'}
+        ]
+    ) }}
+
+    {% if items %}
+    <!-- Music Grid/Table -->
+    <div class="card">
+        <div class="overflow-x-auto">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Artist</th>
+                        <th>Year</th>
+                        <th>Genres</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="musicTable">
+                    {% for item in items %}
+                    <tr class="music-row" data-id="{{ item.id }}" data-type="{{ item.type }}" 
+                        data-search="{{ (item.name + ' ' + item.artist_name + ' ' + item.genres|default(''))|lower }}">
+                        <td>
+                            <span class="badge {{ 'badge-album' if item.type == 'album' else 'badge-track' }}">
+                                {% if item.type == 'album' %}
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>
+                                    </svg>
+                                    Album
+                                {% else %}
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>
+                                    </svg>
+                                    Track
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="flex items-center space-x-3">
+                                <div>
+                                    <div class="font-semibold text-white">
+                                        <a href="{{ item.url }}" target="_blank" class="hover:text-spotify transition-colors">
+                                            {{ item.name }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="font-medium text-gray-300">{{ item.artist_name }}</td>
+                        <td class="text-gray-400">{{ item.release_year }}</td>
+                        <td>
+                            {% if item.genres %}
+                                <div class="flex flex-wrap gap-1">
+                                    {% for genre in item.genres.split(', ')[:2] %}
+                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs bg-dark-600 text-gray-300">
+                                            {{ genre }}
+                                        </span>
+                                    {% endfor %}
+                                    {% if item.genres.split(', ')|length > 2 %}
+                                        <span class="text-xs text-gray-500">+{{ item.genres.split(', ')|length - 2 }}</span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span class="text-gray-500 text-sm">No genres</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end space-x-2">
+                                <a href="{{ item.url }}" target="_blank" 
+                                   class="text-gray-400 hover:text-spotify transition-colors p-1 rounded">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                    </svg>
+                                </a>
+                                {{ delete_button(item.type, item.id) }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    {{ empty_state(
+        title="No music yet",
+        description="Start building your collection by adding your first album or track",
+        action_text="Add Music",
+        action_url="#"
+    ) }}
+    {% endif %}
+</div>
+
+
+{% endblock %}

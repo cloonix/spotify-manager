@@ -1,43 +1,113 @@
+{% from 'macros.html' import page_header, empty_state %}
 {% extends "base.html" %}
-
 {% block content %}
-<div class="container mx-auto mt-8 px-4">
-    <!-- Changed heading to h1 with consistent styles -->
-    <h1 class="text-3xl font-bold mb-4">Artists and Their Genres</h1>
-    {% if artists %}
-    <div class="overflow-x-auto">
-        <table class="min-w-full"> <!-- removed bg-white -->
-            <thead class="bg-gray-800"> <!-- changed from bg-gray-200 -->
-                <tr>
-                    <th class="py-2 px-4 border-b text-left">Artist</th>
-                    <th class="py-2 px-4 border-b text-left">Spotify</th>
-                    <th class="py-2 px-4 border-b text-left">Genres</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for artist in artists %}
-                <tr class="hover:bg-gray-700"> <!-- changed from hover:bg-gray-100 -->
-                    <td class="py-2 px-4 border-b">
-                        <a href="{{ url_for('artist_albums', artist_id=artist.id) }}"
-                            class="text-blue-500 hover:underline">
-                            {{ artist.artist_name }}
-                        </a>
-                    </td>
-                    <td class="py-2 px-4 border-b">
-                        <a href="{{ artist.uri }}" target="_blank" class="text-blue-500 hover:underline"
-                            title="Open in Spotify">
-                            🎧
-                        </a>
-                    </td>
-                    <td class="py-2 px-4 border-b">{{ artist.genres }}</td>
+<div class="space-y-6">
+    <!-- Header -->
+    {{ page_header(
+        title="Artists",
+        count=artists|length ~ " artists in your collection",
+        search_id="artistSearch",
+        search_placeholder="Search artists..."
+    ) }}
 
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    {% if artists %}
+    <!-- Artists Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="artistsGrid">
+        {% for artist in artists %}
+        <div class="artist-card card hover:scale-105 transition-transform duration-200" 
+             data-search="{{ artist.name|lower }} {{ artist.genres|default('')|lower }}">
+            <div class="card-body">
+                <!-- Artist Header -->
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="w-12 h-12 bg-gradient-spotify rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-white text-lg truncate">{{ artist.name }}</h3>
+                        {% if artist.url %}
+                            <a href="{{ artist.url }}" target="_blank" 
+                               class="text-spotify hover:text-green-400 text-sm transition-colors flex items-center space-x-1">
+                                <span>Open in Spotify</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Genres -->
+                <div class="mb-4">
+                    {% if artist.genres %}
+                        <div class="flex flex-wrap gap-2">
+                            {% for genre in artist.genres.split(', ')[:3] %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-dark-600 text-gray-300 border border-dark-500">
+                                    {{ genre }}
+                                </span>
+                            {% endfor %}
+                            {% if artist.genres.split(', ')|length > 3 %}
+                                <span class="text-xs text-gray-500 py-1">+{{ artist.genres.split(', ')|length - 3 }} more</span>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <span class="text-gray-500 text-sm">No genres available</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex space-x-2 pt-4 border-t border-dark-600">
+                    {% if artist.url %}
+                        <a href="{{ artist.url }}" target="_blank" class="btn-secondary flex-1 text-center">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>
+                            </svg>
+                            Listen
+                        </a>
+                    {% endif %}
+                    <button onclick="viewArtistDetails('{{ artist.id }}', '{{ artist.name }}')" 
+                            class="btn-secondary flex-1">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Details
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
-    <p class="text-gray-600">No artists found.</p>
+    {{ empty_state(
+        title="No artists yet",
+        description="Add some music to see your favorite artists here",
+        action_text="Add Music",
+        action_url="#"
+    ) }}
     {% endif %}
 </div>
+
+<!-- Artist Details Modal -->
+<div id="artistModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-auto">
+            <div class="px-6 py-4 border-b border-dark-600">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-white" id="artistModalTitle">Artist Details</h3>
+                    <button id="closeArtistModal" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="artistModalContent">
+                <div class="text-center text-gray-400">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
