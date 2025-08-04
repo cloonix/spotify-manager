@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="card">
+        <div class="card-header">
+            <h1 class="text-2xl font-bold text-white">Import Database</h1>
+            <p class="text-secondary mt-2">Upload a CSV backup file to restore your music collection</p>
+        </div>
+        
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <div>
+                    <label for="file" class="block text-sm font-medium text-secondary mb-2">
+                        Select CSV Backup File
+                    </label>
+                    <div class="border-2 border-dashed border-dark-600 rounded-lg p-6 text-center hover:border-dark-500 transition-colors">
+                        <input type="file" id="file" name="file" accept=".csv" required
+                               class="hidden" onchange="updateFileName(this)">
+                        <label for="file" class="cursor-pointer">
+                            <svg class="w-12 h-12 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <div class="text-sm text-secondary">
+                                <span class="font-medium text-spotify hover:text-green-400">Click to upload</span>
+                                or drag and drop
+                            </div>
+                            <div class="text-xs text-muted mt-1">CSV files only</div>
+                        </label>
+                        <div id="fileName" class="mt-2 text-sm text-primary hidden"></div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark-700 rounded-lg p-4">
+                    <h3 class="font-semibold text-white mb-2">⚠️ Important Notes</h3>
+                    <ul class="text-sm text-secondary space-y-1">
+                        <li>• This will add imported items to your existing collection</li>
+                        <li>• Duplicate items will be updated with new information</li>
+                        <li>• Only CSV files exported from this app are supported</li>
+                        <li>• Large files may take a few moments to process</li>
+                    </ul>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('browse') }}" class="btn-secondary flex-1 text-center">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-primary flex-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        Import Database
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateFileName(input) {
+    const fileName = document.getElementById('fileName');
+    if (input.files.length > 0) {
+        fileName.textContent = `Selected: ${input.files[0].name}`;
+        fileName.classList.remove('hidden');
+    } else {
+        fileName.classList.add('hidden');
+    }
+}
+
+// Drag and drop functionality
+const dropZone = document.querySelector('.border-dashed');
+const fileInput = document.getElementById('file');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+    dropZone.classList.add('border-spotify');
+}
+
+function unhighlight(e) {
+    dropZone.classList.remove('border-spotify');
+}
+
+dropZone.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+        fileInput.files = files;
+        updateFileName(fileInput);
+    }
+}
+</script>
+{% endblock %}

@@ -1,245 +1,205 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
-from werkzeug.utils import secure_filename
-from sqlite3 import IntegrityError
-from spotifyApi import get_album_info, get_track_info, get_artist_info
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+from dotenv import load_dotenv
 import database
 import os
-import tempfile
-import argparse  # Added import for argument parsing
-import shutil             # <-- new import for cross-device file copy
 
-# Configure logging
-import logging
+load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
-
-# Secure configuration
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "default_secret_key")
+app.secret_key = os.environ.get("SECRET_KEY", "spotify-manager-secret")
+
+# Spotify API setup
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET")
+))
+
+def extract_spotify_info(url):
+    """Extract info from Spotify URL."""
+    try:
+        item_id = url.split("/")[-1].split("?")[0]
+        
+        if "/album/" in url:
+            album = sp.album(item_id)
+            artist = sp.artist(album["artists"][0]["id"])
+            return {
+                "type": "album",
+                "album_id": album["id"],
+                "artist_id": album["artists"][0]["id"],
+                "album_name": album["name"],
+                "artist_name": album["artists"][0]["name"],
+                "release_year": int(album["release_date"].split("-")[0]),
+                "album_uri": album["uri"],
+                "url": url,
+                "artist_info": {
+                    "artist_id": artist["id"],
+                    "artist_name": artist["name"],
+                    "genres": artist["genres"],
+                    "uri": artist["uri"],
+                    "external_urls": artist["external_urls"]
+                }
+            }
+        elif "/track/" in url:
+            track = sp.track(item_id)
+            artist = sp.artist(track["artists"][0]["id"])
+            return {
+                "type": "track",
+                "track_id": track["id"],
+                "artist_id": track["artists"][0]["id"],
+                "album_id": track["album"]["id"],
+                "track_name": track["name"],
+                "artist_name": track["artists"][0]["name"],
+                "release_year": int(track["album"]["release_date"].split("-")[0]),
+                "track_uri": track["uri"],
+                "url": url,
+                "artist_info": {
+                    "artist_id": artist["id"],
+                    "artist_name": artist["name"],
+                    "genres": artist["genres"],
+                    "uri": artist["uri"],
+                    "external_urls": artist["external_urls"]
+                }
+            }
+    except Exception as e:
+        return None
 
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
-@app.route("/albums")
-def albums():
-    albums_list = database.get_albums()
-    return render_template("albums.html", albums=albums_list)
-
-
-@app.route("/tracks")
-def tracks():
-    tracks_list = database.get_tracks()
-    return render_template("tracks.html", tracks=tracks_list)
-
-
-@app.route("/add_item", methods=["GET", "POST"])
-def add_item():
-    """Adds an album or track based on the provided Spotify URL."""
-    if request.method == "POST":
-        spotify_url = request.form["spotify_url"]
-        try:
-            if "/album/" in spotify_url:
-                album_info = get_album_info(spotify_url)
-                print(album_info)
-                if album_info and "album_id" in album_info:
-                    # Ensure artist is inserted
-                    artist_info = get_artist_info(album_info["artist_id"])
-                    with database.get_connection() as conn:
-                        cursor = conn.cursor()
-                        database.add_artist(artist_info, cursor)
-                        conn.commit()
-                    database.add_album(
-                        album_info["album_id"],
-                        album_info["artist_id"],
-                        album_info["album_name"],
-                        album_info["release_year"],
-                        album_info["album_uri"],
-                        spotify_url
-                    )
-                else:
-                    flash("Invalid album information received.", "error")
-                    return redirect(url_for("add_item"))
-                flash("Album added successfully.", "success")
-                return redirect(url_for("albums"))
-            elif "/track/" in spotify_url:
-                track_info = get_track_info(spotify_url)
-                if track_info and "track_id" in track_info:
-                    # Ensure artist is inserted
-                    artist_info = get_artist_info(track_info["artist_id"])
-                    with database.get_connection() as conn:
-                        cursor = conn.cursor()
-                        database.add_artist(artist_info, cursor)
-                        conn.commit()
-                    database.add_track(
-                        track_info["track_id"],
-                        track_info["artist_id"],
-                        track_info["album_id"],
-                        track_info["track_name"],
-                        track_info["release_year"],
-                        track_info["track_uri"],
-                        spotify_url
-                    )
-                else:
-                    flash("Invalid track information received.", "error")
-                    return redirect(url_for("add_item"))
-                flash("Track added successfully.", "success")
-                return redirect(url_for("tracks"))
-            else:
-                flash("Invalid Spotify URL. Please provide a valid Album or Track URL.", "error")
-                return redirect(url_for("add_item"))
-        except IntegrityError:
-            flash("Item already exists in the database.", "error")
-            return redirect(url_for("add_item"))
-        except Exception as e:
-            logging.error(f"Error adding item: {e}")
-            flash("An error occurred while adding the item.", "error")
-            return redirect(url_for("add_item"))
-    return render_template("add_item.html")
-
+@app.route("/browse")
+def browse():
+    """Browse all items with optional filtering."""
+    filter_type = request.args.get("type", "all")
+    items = database.get_all_items()
+    
+    if filter_type != "all":
+        items = [item for item in items if item["type"] == filter_type]
+    
+    return render_template("browse.html", items=items, filter_type=filter_type)
 
 @app.route("/artists")
 def artists():
-    """Displays all artists along with their associated genres."""
-    artists_list = database.get_artists_with_genres()
+    artists_list = database.get_artists()
     return render_template("artists.html", artists=artists_list)
 
-
-@app.route("/artist/<artist_id>/albums")
-def artist_albums(artist_id):
+@app.route("/add", methods=["POST"])
+def add_item():
+    """Add item via AJAX."""
+    url = request.form.get("spotify_url")
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    
+    info = extract_spotify_info(url)
+    if not info:
+        return jsonify({"error": "Invalid Spotify URL or API error"}), 400
+    
     try:
-        albums_list = database.get_albums_by_artist(artist_id)
-        return render_template("artist_albums.html", albums=albums_list)
+        # Add artist first
+        database.add_artist(info["artist_info"])
+        
+        # Add album or track
+        if info["type"] == "album":
+            database.add_album(info)
+            message = f"Album '{info['album_name']}' added successfully"
+        else:
+            database.add_track(info)
+            message = f"Track '{info['track_name']}' added successfully"
+        
+        return jsonify({"success": message})
     except Exception as e:
-        flash("Error fetching albums for the artist", "error")
-        return redirect(url_for("artists"))
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
+@app.route("/delete/<item_type>/<item_id>", methods=["POST"])
+def delete_item(item_type, item_id):
+    """Delete item via AJAX."""
+    try:
+        database.delete_item(item_id, item_type)
+        return jsonify({"success": f"{item_type.title()} deleted successfully"})
+    except Exception as e:
+        return jsonify({"error": f"Error deleting {item_type}: {str(e)}"}), 500
 
 @app.route("/export")
-def export_database_route():
-    """Exports the database to export.csv and sends it as a downloadable file."""
-    database.export_database_csv()
-    export_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "export.csv")
-    return send_file(
-        export_file, as_attachment=True, mimetype="text/csv", download_name="export.csv"
-    )
-
-
-@app.route("/import", methods=["GET", "POST"])
-def import_database_route():
-    """Imports the database from an uploaded CSV file."""
-    if request.method == "POST":
-        file = request.files.get("file")
-        if file:
-            filename = secure_filename(file.filename)
-            temp_dir = tempfile.gettempdir()
-            file_path = os.path.join(temp_dir, filename)
-            file.save(file_path)
-            try:
-                database.import_database_csv(file_path)
-                return redirect(url_for("index"))
-            except Exception as e:
-                return f"Error importing database: {e}"
-        else:
-            return "No file provided."
-    return render_template("import_database.html")
-
-
-@app.route("/cleanup", methods=["GET", "POST"])
-def cleanup_database_route():
-    """Cleans up unused artists and genres with confirmation."""
-    if request.method == "POST":
-        confirmation = request.form.get("confirmation")
-        if confirmation and confirmation.lower() == "yes":
-            database.cleanup_unused_artists_and_genres()
-            return redirect(url_for("index"))
-        else:
-            return "Cleanup operation cancelled."
-    return render_template("cleanup.html")
-
-
-@app.route("/delete_album/<album_id>", methods=["POST"])
-def delete_album_route(album_id):
-    """Deletes an album by its ID."""
-    database.delete_album(album_id)
-    return redirect(url_for("albums"))
-
-
-@app.route("/delete_track/<track_id>", methods=["POST"])
-def delete_track_route(track_id):
-    """Deletes a track by its ID."""
-    database.delete_track(track_id)
-    return redirect(url_for("tracks"))
-
-
-@app.route("/genres")
-def genres():
+def export_database():
+    """Export database to CSV file."""
     try:
-        genres_list = database.list_genres()
-        return render_template("genres.html", genres=genres_list)
+        from flask import send_file
+        export_file = database.export_database_csv()
+        return send_file(
+            export_file, 
+            as_attachment=True, 
+            mimetype="text/csv", 
+            download_name="spotify_backup.csv"
+        )
     except Exception as e:
-        flash("Error fetching genres", "error")
+        flash(f"Error exporting database: {str(e)}", "error")
         return redirect(url_for("index"))
 
-
-@app.route("/genres/<int:genre_id>/albums")
-def genre_albums(genre_id):
-    try:
-        albums = database.search_albums_by_genre(genre_id)
-        return render_template("genre_albums.html", albums=albums)
-    except Exception as e:
-        flash("Error fetching albums for the selected genre", "error")
-        return redirect(url_for("genres"))
-
+@app.route("/import", methods=["GET", "POST"])
+def import_database():
+    """Import database from CSV file."""
+    if request.method == "POST":
+        if 'file' not in request.files:
+            flash("No file selected", "error")
+            return redirect(url_for("import_database"))
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash("No file selected", "error")
+            return redirect(url_for("import_database"))
+        
+        if file and file.filename.endswith('.csv'):
+            try:
+                import tempfile
+                import os
+                from werkzeug.utils import secure_filename
+                
+                filename = secure_filename(file.filename)
+                temp_path = os.path.join(tempfile.gettempdir(), filename)
+                file.save(temp_path)
+                
+                database.import_database_csv(temp_path)
+                os.remove(temp_path)
+                
+                flash("Database imported successfully!", "success")
+                return redirect(url_for("browse"))
+            except Exception as e:
+                flash(f"Error importing database: {str(e)}", "error")
+        else:
+            flash("Please select a valid CSV file", "error")
+    
+    return render_template("import.html")
 
 @app.route("/download_sqlite")
 def download_sqlite():
+    """Download SQLite database file."""
     try:
+        from flask import send_file
         return send_file(
             database.DB_PATH,
             as_attachment=True,
             mimetype="application/x-sqlite3",
-            download_name=os.path.basename(database.DB_PATH)
+            download_name="spotify_manager.db"
         )
     except Exception as e:
-        flash("Error exporting database file", "error")
+        flash(f"Error downloading database: {str(e)}", "error")
         return redirect(url_for("index"))
 
-
-@app.route("/upload_sqlite", methods=["GET", "POST"])
-def upload_sqlite():
-    if request.method == "POST":
-        file = request.files.get("file")
-        if file:
-            filename = secure_filename(file.filename)
-            temp_path = os.path.join(tempfile.gettempdir(), filename)
-            file.save(temp_path)
-            try:
-                shutil.copy(temp_path, database.DB_PATH)
-                os.remove(temp_path)
-                flash("SQLite database replaced successfully. A restart might be required.", "success")
-            except Exception as e:
-                flash(f"Error replacing database: {e}", "error")
-            return redirect(url_for("index"))
-        else:
-            flash("No file provided.", "error")
-            return redirect(url_for("upload_sqlite"))
-    return render_template("upload_sqlite.html")
+@app.route("/cleanup", methods=["POST"])
+def cleanup():
+    """Clean up unused artists."""
+    try:
+        removed_count = database.cleanup_unused_artists()
+        return jsonify({"success": f"Removed {removed_count} unused artists"})
+    except Exception as e:
+        return jsonify({"error": f"Error during cleanup: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
-    # Added argument parsing for the database location
-    parser = argparse.ArgumentParser(description="Spotify Manager App")
-    parser.add_argument(
-        "--database", required=True, help="Path to the SQLite database file"
-    )
-    args = parser.parse_args()
-
-    # Set the database path in the database module (adjust accordingly to your database module usage)
-    database.DB_PATH = args.database  # Assumes database module uses this variable
-
+    database.DB_PATH = os.environ.get("DATABASE", "spotify_manager.db")
     database.create_tables()
     app.run(host="0.0.0.0", port=5000, debug=True)
 
