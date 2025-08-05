@@ -14,8 +14,8 @@
             <div class="flex items-center space-x-2">
                 <span class="text-sm text-gray-400">View:</span>
                 <div class="flex bg-dark-800 border border-dark-600 rounded-lg p-1">
-                    <button id="gridView" class="px-3 py-1 text-sm rounded bg-spotify text-white">Grid</button>
-                    <button id="listView" class="px-3 py-1 text-sm rounded text-gray-400 hover:text-white">List</button>
+                    <button id="listView" class="px-3 py-1 text-sm rounded bg-spotify text-white">Table</button>
+                    <button id="gridView" class="px-3 py-1 text-sm rounded text-gray-400 hover:text-white">Grid</button>
                 </div>
             </div>
         </div>
@@ -70,8 +70,86 @@
     </div>
 
     {% if artists %}
-    <!-- Grid View (Default) -->
-    <div id="gridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+    <!-- Table View (Default) -->
+    <div id="listContainer">
+        <div class="card overflow-hidden">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th class="w-12"></th>
+                        <th>Artist</th>
+                        <th>Genres</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for artist in artists %}
+                    <tr class="artist-item-list hover:bg-dark-700 transition-colors" 
+                        data-name="{{ artist.name|lower }}" 
+                        data-genres="{{ artist.genres|default('')|lower }}"
+                        data-letter="{{ artist.name[0]|upper if artist.name else 'A' }}">
+                        
+                        <td>
+                            <div class="w-8 h-8 bg-gradient-spotify rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+                        </td>
+                        
+                        <td>
+                            <div class="font-medium text-white cursor-pointer hover:text-spotify transition-colors"
+                                 onclick="viewArtistDetails('{{ artist.id }}', '{{ artist.name }}')">
+                                {{ artist.name }}
+                            </div>
+                        </td>
+                        
+                        <td>
+                            {% if artist.genres %}
+                                <div class="flex flex-wrap gap-1">
+                                    {% for genre in artist.genres.split(', ')[:3] %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-dark-600 text-gray-300 border border-dark-500">
+                                            {{ genre }}
+                                        </span>
+                                    {% endfor %}
+                                    {% if artist.genres.split(', ')|length > 3 %}
+                                        <span class="text-xs text-gray-500 ml-1">+{{ artist.genres.split(', ')|length - 3 }} more</span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span class="text-gray-500 text-sm">No genres</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="text-right">
+                            <div class="flex justify-end space-x-2">
+                                {% if artist.url %}
+                                <a href="{{ artist.url }}" target="_blank" 
+                                   class="p-2 text-gray-400 hover:text-spotify transition-colors rounded hover:bg-dark-600" 
+                                   title="Open in Spotify">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                    </svg>
+                                </a>
+                                {% endif %}
+                                <button onclick="viewArtistDetails('{{ artist.id }}', '{{ artist.name }}')" 
+                                        class="p-2 text-gray-400 hover:text-accent-400 transition-colors rounded hover:bg-dark-600"
+                                        title="View Details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Grid View (Hidden by default) -->
+    <div id="gridContainer" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {% for artist in artists %}
         <div class="artist-item bg-dark-800 border border-dark-600 rounded-lg p-3 hover:bg-dark-700 transition-all duration-200 cursor-pointer" 
              data-name="{{ artist.name|lower }}" 
@@ -116,80 +194,6 @@
         {% endfor %}
     </div>
     
-    <!-- List View (Hidden by default) -->
-    <div id="listContainer" class="hidden">
-        <div class="card overflow-hidden">
-            <table class="table-modern">
-                <thead>
-                    <tr>
-                        <th class="w-12"></th>
-                        <th>Artist</th>
-                        <th>Genres</th>
-                        <th class="text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for artist in artists %}
-                    <tr class="artist-item-list hover:bg-dark-700 transition-colors" 
-                        data-name="{{ artist.name|lower }}" 
-                        data-genres="{{ artist.genres|default('')|lower }}"
-                        data-letter="{{ artist.name[0]|upper if artist.name else 'A' }}">
-                        
-                        <td>
-                            <div class="w-8 h-8 bg-gradient-spotify rounded-full flex items-center justify-center">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                </svg>
-                            </div>
-                        </td>
-                        
-                        <td>
-                            <div class="font-medium text-white">{{ artist.name }}</div>
-                        </td>
-                        
-                        <td>
-                            {% if artist.genres %}
-                                <div class="flex flex-wrap gap-1">
-                                    {% for genre in artist.genres.split(', ')[:2] %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-dark-600 text-gray-300">
-                                            {{ genre }}
-                                        </span>
-                                    {% endfor %}
-                                    {% if artist.genres.split(', ')|length > 2 %}
-                                        <span class="text-xs text-gray-500">+{{ artist.genres.split(', ')|length - 2 }}</span>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                <span class="text-gray-500 text-sm">No genres</span>
-                            {% endif %}
-                        </td>
-                        
-                        <td class="text-right">
-                            <div class="flex justify-end space-x-2">
-                                {% if artist.url %}
-                                <a href="{{ artist.url }}" target="_blank" 
-                                   class="p-1 text-gray-400 hover:text-spotify transition-colors" 
-                                   title="Open in Spotify">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                    </svg>
-                                </a>
-                                {% endif %}
-                                <button onclick="viewArtistDetails('{{ artist.id }}', '{{ artist.name }}')" 
-                                        class="p-1 text-gray-400 hover:text-accent-400 transition-colors"
-                                        title="View Details">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
     
     <!-- No Results Message -->
     <div id="noResults" class="hidden text-center py-12">
@@ -239,7 +243,7 @@
 // Artist filtering and view management
 class ArtistManager {
     constructor() {
-        this.currentView = 'grid';
+        this.currentView = 'list';
         this.initializeElements();
         this.bindEvents();
         this.updateView();
@@ -274,15 +278,7 @@ class ArtistManager {
     }
     
     updateView() {
-        if (this.currentView === 'grid') {
-            this.gridView?.classList.add('bg-spotify', 'text-white');
-            this.gridView?.classList.remove('text-gray-400');
-            this.listView?.classList.remove('bg-spotify', 'text-white');
-            this.listView?.classList.add('text-gray-400');
-            
-            this.gridContainer?.classList.remove('hidden');
-            this.listContainer?.classList.add('hidden');
-        } else {
+        if (this.currentView === 'list') {
             this.listView?.classList.add('bg-spotify', 'text-white');
             this.listView?.classList.remove('text-gray-400');
             this.gridView?.classList.remove('bg-spotify', 'text-white');
@@ -290,6 +286,14 @@ class ArtistManager {
             
             this.listContainer?.classList.remove('hidden');
             this.gridContainer?.classList.add('hidden');
+        } else {
+            this.gridView?.classList.add('bg-spotify', 'text-white');
+            this.gridView?.classList.remove('text-gray-400');
+            this.listView?.classList.remove('bg-spotify', 'text-white');
+            this.listView?.classList.add('text-gray-400');
+            
+            this.gridContainer?.classList.remove('hidden');
+            this.listContainer?.classList.add('hidden');
         }
     }
     
@@ -346,8 +350,11 @@ class ArtistManager {
         if (this.gridContainer) {
             this.gridContainer.classList.toggle('hidden', visibleCount === 0);
         }
-        if (this.listContainer) {
-            this.listContainer.classList.toggle('hidden', visibleCount === 0 || this.currentView !== 'list');
+        if (this.listContainer && this.currentView === 'list') {
+            this.listContainer.classList.toggle('hidden', visibleCount === 0);
+        }
+        if (this.gridContainer && this.currentView === 'grid') {
+            this.gridContainer.classList.toggle('hidden', visibleCount === 0);
         }
     }
     
