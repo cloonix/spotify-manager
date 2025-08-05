@@ -31,7 +31,13 @@ class SpotifyManager {
         // Close modals on escape/backdrop
         document.addEventListener('keydown', (e) => e.key === 'Escape' && this.closeModal());
         this.addMusicModal?.addEventListener('click', (e) => e.target === this.addMusicModal && this.closeModal());
-        document.addEventListener('click', () => this.settingsMenu?.classList.add('hidden'));
+        
+        // Close settings menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#settingsBtn') && !e.target.closest('#settingsMenu')) {
+                this.settingsMenu?.classList.add('hidden');
+            }
+        });
 
         // Auto-paste detection
         document.getElementById('quickSpotifyUrl')?.addEventListener('paste', () => {
@@ -338,3 +344,64 @@ window.updateFileName = (input) => {
 };
 window.viewArtistDetails = SpotifyManager.viewArtistDetails;
 window.searchSpotify = SpotifyManager.searchSpotify;
+
+// Helper function for sync operations
+async function performSync(endpoint, confirmMessage, successRefresh = false) {
+    if (!confirm(confirmMessage)) return;
+    
+    try {
+        const response = await fetch(endpoint, { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            app.showMessage(data.success, 'success');
+            if (successRefresh) {
+                setTimeout(() => window.location.reload(), 2000);
+            }
+        } else {
+            app.showMessage(data.error, 'error');
+        }
+        
+        // Close settings menu
+        document.getElementById('settingsMenu').classList.add('hidden');
+    } catch (error) {
+        app.showMessage('Network error during sync', 'error');
+        document.getElementById('settingsMenu').classList.add('hidden');
+    }
+}
+
+// Sync all Spotify data
+window.syncAllSpotify = async function() {
+    await performSync(
+        '/sync-all-spotify',
+        'This will sync ALL your Spotify data (followed artists, saved albums, and saved tracks). This may take a while. Continue?',
+        true
+    );
+};
+
+// Sync followed artists from Spotify
+window.syncFollowedArtists = async function() {
+    await performSync(
+        '/sync-followed-artists',
+        'This will sync all your followed artists from Spotify. Continue?',
+        window.location.pathname === '/artists'
+    );
+};
+
+// Sync saved albums from Spotify
+window.syncSavedAlbums = async function() {
+    await performSync(
+        '/sync-saved-albums',
+        'This will sync all your saved albums from Spotify. Continue?',
+        window.location.pathname === '/browse'
+    );
+};
+
+// Sync saved tracks from Spotify
+window.syncSavedTracks = async function() {
+    await performSync(
+        '/sync-saved-tracks',
+        'This will sync all your saved tracks from Spotify. Continue?',
+        window.location.pathname === '/browse'
+    );
+};

@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import database
@@ -17,6 +17,28 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=os.getenv("SPOTIPY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIPY_CLIENT_SECRET")
 ))
+
+# Spotify OAuth setup for user authentication
+def get_spotify_oauth():
+    return SpotifyOAuth(
+        client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:5000/callback"),
+        scope="user-follow-read user-library-read"
+    )
+
+def get_user_spotify():
+    """Get authenticated Spotify client for current user."""
+    token_info = session.get('token_info')
+    if not token_info:
+        return None
+    
+    spotify_oauth = get_spotify_oauth()
+    if spotify_oauth.is_token_expired(token_info):
+        token_info = spotify_oauth.refresh_access_token(token_info['refresh_token'])
+        session['token_info'] = token_info
+    
+    return spotipy.Spotify(auth=token_info['access_token'])
 
 def extract_spotify_info(url):
     """Extract info from Spotify URL."""
@@ -172,6 +194,303 @@ def cleanup():
         return jsonify({"success": f"Removed {removed_count} unused artists"})
     except Exception as e:
         return jsonify({"error": f"Error during cleanup: {str(e)}"}), 500
+
+@app.route("/login")
+def login():
+    """Initiate Spotify OAuth login."""
+    spotify_oauth = get_spotify_oauth()
+    auth_url = spotify_oauth.get_authorize_url()
+    return redirect(auth_url)
+
+@app.route("/callback")
+def callback():
+    """Handle Spotify OAuth callback."""
+    spotify_oauth = get_spotify_oauth()
+    code = request.args.get('code')
+    
+    if code:
+        try:
+            token_info = spotify_oauth.get_access_token(code)
+            session['token_info'] = token_info
+            flash("Successfully connected to Spotify!", "success")
+        except Exception as e:
+            flash(f"Failed to connect to Spotify: {str(e)}", "error")
+    else:
+        flash("Authorization cancelled", "error")
+    
+    return redirect(url_for("index"))
+
+@app.route("/logout")
+def logout():
+    """Logout and clear Spotify session."""
+    session.pop('token_info', None)
+    flash("Logged out from Spotify", "success")
+    return redirect(url_for("index"))
+
+@app.route("/sync-followed-artists", methods=["POST"])
+def sync_followed_artists():
+    """Sync user's followed artists from Spotify."""
+    user_sp = get_user_spotify()
+    if not user_sp:
+        return jsonify({"error": "Please login with Spotify first"}), 401
+    
+    try:
+        added_count = 0
+        results = user_sp.current_user_followed_artists(limit=50)
+        
+        while results:
+            for artist in results['artists']['items']:
+                # Build artist info structure
+                artist_info = {
+                    "artist_id": artist["id"],
+                    "artist_name": artist["name"],
+                    "genres": artist["genres"],
+                    "uri": artist["uri"],
+                    "external_urls": artist["external_urls"]
+                }
+                
+                # Add to database (will skip if already exists)
+                try:
+                    database.add_artist(artist_info)
+                    added_count += 1
+                except Exception:
+                    # Artist might already exist, continue
+                    pass
+            
+            # Get next page if available
+            if results['artists']['next']:
+                results = user_sp.next(results['artists'])
+            else:
+                break
+        
+        return jsonify({"success": f"Synced {added_count} followed artists from Spotify"})
+    
+    except Exception as e:
+        return jsonify({"error": f"Error syncing artists: {str(e)}"}), 500
+
+@app.route("/sync-saved-albums", methods=["POST"])
+def sync_saved_albums():
+    """Sync user's saved albums from Spotify."""
+    user_sp = get_user_spotify()
+    if not user_sp:
+        return jsonify({"error": "Please login with Spotify first"}), 401
+    
+    try:
+        added_count = 0
+        results = user_sp.current_user_saved_albums(limit=50)
+        
+        while results:
+            for item in results['items']:
+                album = item['album']
+                # Get artist details for genres
+                artist = sp.artist(album["artists"][0]["id"])
+                
+                # Build album info structure
+                album_info = {
+                    "type": "album",
+                    "album_id": album["id"],
+                    "artist_id": album["artists"][0]["id"],
+                    "album_name": album["name"],
+                    "artist_name": album["artists"][0]["name"],
+                    "release_year": int(album["release_date"].split("-")[0]),
+                    "album_uri": album["uri"],
+                    "url": album["external_urls"]["spotify"],
+                    "artist_info": {
+                        "artist_id": artist["id"],
+                        "artist_name": artist["name"],
+                        "genres": artist["genres"],
+                        "uri": artist["uri"],
+                        "external_urls": artist["external_urls"]
+                    }
+                }
+                
+                try:
+                    # Add artist first
+                    database.add_artist(album_info["artist_info"])
+                    # Add album
+                    database.add_album(album_info)
+                    added_count += 1
+                except Exception:
+                    # Album might already exist, continue
+                    pass
+            
+            # Get next page if available
+            if results['next']:
+                results = user_sp.next(results)
+            else:
+                break
+        
+        return jsonify({"success": f"Synced {added_count} saved albums from Spotify"})
+    
+    except Exception as e:
+        return jsonify({"error": f"Error syncing albums: {str(e)}"}), 500
+
+@app.route("/sync-saved-tracks", methods=["POST"])
+def sync_saved_tracks():
+    """Sync user's saved tracks from Spotify."""
+    user_sp = get_user_spotify()
+    if not user_sp:
+        return jsonify({"error": "Please login with Spotify first"}), 401
+    
+    try:
+        added_count = 0
+        results = user_sp.current_user_saved_tracks(limit=50)
+        
+        while results:
+            for item in results['items']:
+                track = item['track']
+                # Get artist details for genres
+                artist = sp.artist(track["artists"][0]["id"])
+                
+                # Build track info structure
+                track_info = {
+                    "type": "track",
+                    "track_id": track["id"],
+                    "artist_id": track["artists"][0]["id"],
+                    "album_id": track["album"]["id"],
+                    "track_name": track["name"],
+                    "artist_name": track["artists"][0]["name"],
+                    "release_year": int(track["album"]["release_date"].split("-")[0]),
+                    "track_uri": track["uri"],
+                    "url": track["external_urls"]["spotify"],
+                    "artist_info": {
+                        "artist_id": artist["id"],
+                        "artist_name": artist["name"],
+                        "genres": artist["genres"],
+                        "uri": artist["uri"],
+                        "external_urls": artist["external_urls"]
+                    }
+                }
+                
+                try:
+                    # Add artist first
+                    database.add_artist(track_info["artist_info"])
+                    # Add track
+                    database.add_track(track_info)
+                    added_count += 1
+                except Exception:
+                    # Track might already exist, continue
+                    pass
+            
+            # Get next page if available
+            if results['next']:
+                results = user_sp.next(results)
+            else:
+                break
+        
+        return jsonify({"success": f"Synced {added_count} saved tracks from Spotify"})
+    
+    except Exception as e:
+        return jsonify({"error": f"Error syncing tracks: {str(e)}"}), 500
+
+@app.route("/sync-all-spotify", methods=["POST"])
+def sync_all_spotify():
+    """Sync all user's Spotify data (artists, albums, tracks)."""
+    user_sp = get_user_spotify()
+    if not user_sp:
+        return jsonify({"error": "Please login with Spotify first"}), 401
+    
+    try:
+        total_artists = 0
+        total_albums = 0
+        total_tracks = 0
+        
+        # Sync followed artists
+        results = user_sp.current_user_followed_artists(limit=50)
+        while results:
+            for artist in results['artists']['items']:
+                artist_info = {
+                    "artist_id": artist["id"],
+                    "artist_name": artist["name"],
+                    "genres": artist["genres"],
+                    "uri": artist["uri"],
+                    "external_urls": artist["external_urls"]
+                }
+                try:
+                    database.add_artist(artist_info)
+                    total_artists += 1
+                except Exception:
+                    pass
+            if results['artists']['next']:
+                results = user_sp.next(results['artists'])
+            else:
+                break
+        
+        # Sync saved albums
+        results = user_sp.current_user_saved_albums(limit=50)
+        while results:
+            for item in results['items']:
+                album = item['album']
+                artist = sp.artist(album["artists"][0]["id"])
+                album_info = {
+                    "type": "album",
+                    "album_id": album["id"],
+                    "artist_id": album["artists"][0]["id"],
+                    "album_name": album["name"],
+                    "artist_name": album["artists"][0]["name"],
+                    "release_year": int(album["release_date"].split("-")[0]),
+                    "album_uri": album["uri"],
+                    "url": album["external_urls"]["spotify"],
+                    "artist_info": {
+                        "artist_id": artist["id"],
+                        "artist_name": artist["name"],
+                        "genres": artist["genres"],
+                        "uri": artist["uri"],
+                        "external_urls": artist["external_urls"]
+                    }
+                }
+                try:
+                    database.add_artist(album_info["artist_info"])
+                    database.add_album(album_info)
+                    total_albums += 1
+                except Exception:
+                    pass
+            if results['next']:
+                results = user_sp.next(results)
+            else:
+                break
+        
+        # Sync saved tracks
+        results = user_sp.current_user_saved_tracks(limit=50)
+        while results:
+            for item in results['items']:
+                track = item['track']
+                artist = sp.artist(track["artists"][0]["id"])
+                track_info = {
+                    "type": "track",
+                    "track_id": track["id"],
+                    "artist_id": track["artists"][0]["id"],
+                    "album_id": track["album"]["id"],
+                    "track_name": track["name"],
+                    "artist_name": track["artists"][0]["name"],
+                    "release_year": int(track["album"]["release_date"].split("-")[0]),
+                    "track_uri": track["uri"],
+                    "url": track["external_urls"]["spotify"],
+                    "artist_info": {
+                        "artist_id": artist["id"],
+                        "artist_name": artist["name"],
+                        "genres": artist["genres"],
+                        "uri": artist["uri"],
+                        "external_urls": artist["external_urls"]
+                    }
+                }
+                try:
+                    database.add_artist(track_info["artist_info"])
+                    database.add_track(track_info)
+                    total_tracks += 1
+                except Exception:
+                    pass
+            if results['next']:
+                results = user_sp.next(results)
+            else:
+                break
+        
+        return jsonify({
+            "success": f"Full sync complete! Added {total_artists} artists, {total_albums} albums, {total_tracks} tracks"
+        })
+    
+    except Exception as e:
+        return jsonify({"error": f"Error during full sync: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
