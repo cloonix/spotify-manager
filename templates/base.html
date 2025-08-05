@@ -75,8 +75,34 @@
                             </svg>
                             Settings
                         </button>
-                        <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-48 card shadow-xl z-50">
+                        <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-56 card shadow-xl z-50">
                             <div class="p-2 space-y-1">
+                                <!-- Spotify Integration Section -->
+                                <div class="border-b border-dark-600 pb-2 mb-2">
+                                    <p class="text-xs text-gray-400 uppercase font-semibold mb-2">Spotify Integration</p>
+                                    {% if session.get('token_info') %}
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs text-green-400">✓ Connected</span>
+                                            <a href="{{ url_for('logout') }}" class="text-xs text-gray-400 hover:text-white">Logout</a>
+                                        </div>
+                                        <button onclick="syncFollowedArtists()" class="nav-link w-full text-left">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                            </svg>
+                                            Sync Followed Artists
+                                        </button>
+                                    {% else %}
+                                        <a href="{{ url_for('login') }}" class="nav-link">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                                            </svg>
+                                            Connect Spotify
+                                        </a>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Data Management Section -->
+                                <p class="text-xs text-gray-400 uppercase font-semibold mb-2">Data Management</p>
                                 <a href="{{ url_for('export_database') }}" class="nav-link">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>

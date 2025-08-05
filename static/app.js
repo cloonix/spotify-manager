@@ -344,3 +344,29 @@ window.updateFileName = (input) => {
 };
 window.viewArtistDetails = SpotifyManager.viewArtistDetails;
 window.searchSpotify = SpotifyManager.searchSpotify;
+
+// Sync followed artists from Spotify
+window.syncFollowedArtists = async function() {
+    if (!confirm('This will sync all your followed artists from Spotify. Continue?')) return;
+    
+    try {
+        const response = await fetch('/sync-followed-artists', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            app.showMessage(data.success, 'success');
+            // Refresh artists page if we're on it
+            if (window.location.pathname === '/artists') {
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        } else {
+            app.showMessage(data.error, 'error');
+        }
+        
+        // Close settings menu
+        document.getElementById('settingsMenu').classList.add('hidden');
+    } catch (error) {
+        app.showMessage('Network error during sync', 'error');
+        document.getElementById('settingsMenu').classList.add('hidden');
+    }
+};
