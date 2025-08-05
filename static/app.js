@@ -345,19 +345,18 @@ window.updateFileName = (input) => {
 window.viewArtistDetails = SpotifyManager.viewArtistDetails;
 window.searchSpotify = SpotifyManager.searchSpotify;
 
-// Sync followed artists from Spotify
-window.syncFollowedArtists = async function() {
-    if (!confirm('This will sync all your followed artists from Spotify. Continue?')) return;
+// Helper function for sync operations
+async function performSync(endpoint, confirmMessage, successRefresh = false) {
+    if (!confirm(confirmMessage)) return;
     
     try {
-        const response = await fetch('/sync-followed-artists', { method: 'POST' });
+        const response = await fetch(endpoint, { method: 'POST' });
         const data = await response.json();
         
         if (data.success) {
             app.showMessage(data.success, 'success');
-            // Refresh artists page if we're on it
-            if (window.location.pathname === '/artists') {
-                setTimeout(() => window.location.reload(), 1500);
+            if (successRefresh) {
+                setTimeout(() => window.location.reload(), 2000);
             }
         } else {
             app.showMessage(data.error, 'error');
@@ -369,4 +368,40 @@ window.syncFollowedArtists = async function() {
         app.showMessage('Network error during sync', 'error');
         document.getElementById('settingsMenu').classList.add('hidden');
     }
+}
+
+// Sync all Spotify data
+window.syncAllSpotify = async function() {
+    await performSync(
+        '/sync-all-spotify',
+        'This will sync ALL your Spotify data (followed artists, saved albums, and saved tracks). This may take a while. Continue?',
+        true
+    );
+};
+
+// Sync followed artists from Spotify
+window.syncFollowedArtists = async function() {
+    await performSync(
+        '/sync-followed-artists',
+        'This will sync all your followed artists from Spotify. Continue?',
+        window.location.pathname === '/artists'
+    );
+};
+
+// Sync saved albums from Spotify
+window.syncSavedAlbums = async function() {
+    await performSync(
+        '/sync-saved-albums',
+        'This will sync all your saved albums from Spotify. Continue?',
+        window.location.pathname === '/browse'
+    );
+};
+
+// Sync saved tracks from Spotify
+window.syncSavedTracks = async function() {
+    await performSync(
+        '/sync-saved-tracks',
+        'This will sync all your saved tracks from Spotify. Continue?',
+        window.location.pathname === '/browse'
+    );
 };

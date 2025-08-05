@@ -85,12 +85,32 @@
                                             <span class="text-xs text-green-400">✓ Connected</span>
                                             <a href="{{ url_for('logout') }}" class="text-xs text-gray-400 hover:text-white">Logout</a>
                                         </div>
-                                        <button onclick="syncFollowedArtists()" class="nav-link w-full text-left">
+                                        <button onclick="syncAllSpotify()" class="nav-link w-full text-left text-spotify font-semibold">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                             </svg>
-                                            Sync Followed Artists
+                                            Sync All Spotify Data
                                         </button>
+                                        <div class="ml-4 space-y-1">
+                                            <button onclick="syncFollowedArtists()" class="nav-link w-full text-left text-sm">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                </svg>
+                                                Sync Followed Artists
+                                            </button>
+                                            <button onclick="syncSavedAlbums()" class="nav-link w-full text-left text-sm">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                                </svg>
+                                                Sync Saved Albums
+                                            </button>
+                                            <button onclick="syncSavedTracks()" class="nav-link w-full text-left text-sm">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>
+                                                </svg>
+                                                Sync Saved Tracks
+                                            </button>
+                                        </div>
                                     {% else %}
                                         <a href="{{ url_for('login') }}" class="nav-link">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
