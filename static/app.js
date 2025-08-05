@@ -31,7 +31,13 @@ class SpotifyManager {
         // Close modals on escape/backdrop
         document.addEventListener('keydown', (e) => e.key === 'Escape' && this.closeModal());
         this.addMusicModal?.addEventListener('click', (e) => e.target === this.addMusicModal && this.closeModal());
-        document.addEventListener('click', () => this.settingsMenu?.classList.add('hidden'));
+        
+        // Close settings menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#settingsBtn') && !e.target.closest('#settingsMenu')) {
+                this.settingsMenu?.classList.add('hidden');
+            }
+        });
 
         // Auto-paste detection
         document.getElementById('quickSpotifyUrl')?.addEventListener('paste', () => {
