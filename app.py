@@ -110,7 +110,7 @@ def artists():
 
 @app.route("/add", methods=["POST"])
 def add_item():
-    """Add item via AJAX."""
+    """Add item via AJAX and save to Spotify library."""
     url = request.form.get("spotify_url")
     if not url:
         return jsonify({"error": "No URL provided"}), 400
@@ -123,13 +123,35 @@ def add_item():
         # Add artist first
         database.add_artist(info["artist_info"])
         
-        # Add album or track
+        # Add to local database
         if info["type"] == "album":
             database.add_album(info)
-            message = f"Album '{info['album_name']}' added successfully"
+            item_name = f"Album '{info['album_name']}'"
         else:
             database.add_track(info)
-            message = f"Track '{info['track_name']}' added successfully"
+            item_name = f"Track '{info['track_name']}'"
+        
+        # Also save to user's Spotify library
+        user_sp = get_user_spotify()
+        spotify_saved = False
+        
+        if user_sp:
+            try:
+                if info["type"] == "album":
+                    user_sp.current_user_saved_albums_add([info["album_id"]])
+                    spotify_saved = True
+                else:
+                    user_sp.current_user_saved_tracks_add([info["track_id"]])
+                    spotify_saved = True
+            except Exception as e:
+                # Continue even if Spotify save fails
+                print(f"Failed to save to Spotify: {e}")
+        
+        # Provide appropriate feedback
+        if spotify_saved:
+            message = f"{item_name} added successfully and saved to your Spotify library"
+        else:
+            message = f"{item_name} added to local database (Spotify save failed - please ensure you're logged in)"
         
         return jsonify({"success": message})
     except Exception as e:
