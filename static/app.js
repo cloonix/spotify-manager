@@ -6,31 +6,19 @@ class SpotifyManager {
     }
 
     initializeElements() {
-        this.addMusicModal = document.getElementById('addMusicModal');
-        this.addMusicForm = document.getElementById('addMusicForm');
         this.settingsMenu = document.getElementById('settingsMenu');
         this.mobileMenu = document.getElementById('mobileMenu');
     }
 
     bindEvents() {
-        // Modal controls
+        // Simplified event handling - no advanced form modal
         document.addEventListener('click', (e) => {
-            if (e.target.matches('#addMusicBtn, [id*="addItemButton"]')) {
-                e.preventDefault();
-                this.openModal();
-            }
-            if (e.target.matches('#closeModal, #cancelAdd')) this.closeModal();
             if (e.target.id === 'settingsBtn') this.toggleSettings(e);
             if (e.target.id === 'mobileMenuBtn') this.toggleMobile();
         });
 
-        // Form submissions
-        this.addMusicForm?.addEventListener('submit', (e) => this.submitMusic(e));
+        // Form submissions - only quick add form now
         document.getElementById('quickAddForm')?.addEventListener('submit', (e) => this.quickAdd(e));
-
-        // Close modals on escape/backdrop
-        document.addEventListener('keydown', (e) => e.key === 'Escape' && this.closeModal());
-        this.addMusicModal?.addEventListener('click', (e) => e.target === this.addMusicModal && this.closeModal());
         
         // Close settings menu when clicking outside
         document.addEventListener('click', (e) => {
@@ -50,16 +38,6 @@ class SpotifyManager {
         });
     }
 
-    openModal() {
-        this.addMusicModal.classList.remove('hidden');
-        setTimeout(() => document.getElementById('spotifyUrl')?.focus(), 100);
-    }
-
-    closeModal() {
-        this.addMusicModal.classList.add('hidden');
-        this.addMusicForm?.reset();
-    }
-
     toggleSettings(e) {
         e.stopPropagation();
         this.settingsMenu.classList.toggle('hidden');
@@ -67,33 +45,6 @@ class SpotifyManager {
 
     toggleMobile() {
         this.mobileMenu?.classList.toggle('hidden');
-    }
-
-    async submitMusic(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const btn = e.target.querySelector('button[type="submit"]');
-        
-        this.setLoading(btn, true);
-        
-        try {
-            const response = await fetch('/add', { method: 'POST', body: formData });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showMessage(data.success, 'success');
-                this.closeModal();
-                if (window.location.pathname === '/browse') {
-                    setTimeout(() => window.location.reload(), 1000);
-                }
-            } else {
-                this.showMessage(data.error, 'error');
-            }
-        } catch (error) {
-            this.showMessage('Failed to add music. Please try again.', 'error');
-        } finally {
-            this.setLoading(btn, false);
-        }
     }
 
     async quickAdd(e) {
