@@ -110,13 +110,20 @@ class SpotifyManager {
         const input = document.getElementById(inputId);
         const items = document.querySelectorAll(itemSelector);
         
-        input?.addEventListener('input', function() {
-            const term = this.value.toLowerCase();
+        const performSearch = () => {
+            const term = input.value.toLowerCase();
             items.forEach(item => {
                 const searchData = item.dataset.search || item.textContent.toLowerCase();
                 item.style.display = searchData.includes(term) ? '' : 'none';
             });
-        });
+        };
+        
+        input?.addEventListener('input', performSearch);
+        
+        // Trigger search immediately if input has a value (e.g., from URL parameter)
+        if (input && input.value.trim()) {
+            performSearch();
+        }
     }
 
     static async deleteItem(type, id) {
@@ -305,7 +312,7 @@ SpotifyManager.viewArtistDetails = function(artistId, artistName) {
                     <div class="bg-dark-700 rounded-lg p-4">
                         <h5 class="font-semibold text-white mb-3">Quick Actions</h5>
                         <div class="space-y-3">
-                            <a href="/browse?search=${encodeURIComponent(data.name)}" 
+                            <a href="/browse?artist=${encodeURIComponent(data.name)}" 
                                class="flex items-center text-spotify hover:text-green-400 transition-colors">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-1v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-1"/>

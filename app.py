@@ -96,12 +96,19 @@ def index():
 def browse():
     """Browse all items with optional filtering."""
     filter_type = request.args.get("type", "all")
+    search_query = request.args.get("search", "")
+    artist_query = request.args.get("artist", "")
+    
+    # If artist parameter is provided, use it as the search query
+    if artist_query:
+        search_query = artist_query
+    
     items = database.get_all_items()
     
     if filter_type != "all":
         items = [item for item in items if item["type"] == filter_type]
     
-    return render_template("browse.html", items=items, filter_type=filter_type)
+    return render_template("browse.html", items=items, filter_type=filter_type, search_query=search_query)
 
 @app.route("/artists")
 def artists():

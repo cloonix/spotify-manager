@@ -8,6 +8,7 @@
         count=items|length ~ " total items",
         search_id="searchInput",
         search_placeholder="Search music...",
+        search_value=search_query,
         filters=[
             {"label": "All", "url": "?type=all", "active": filter_type == 'all'},
             {"label": "Albums", "url": "?type=album", "active": filter_type == 'album'},

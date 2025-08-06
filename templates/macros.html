@@ -1,5 +1,5 @@
 {# Reusable header component with title, subtitle, count, and optional search/filters #}
-{% macro page_header(title, subtitle=None, count=None, search_id=None, search_placeholder=None, filters=None) %}
+{% macro page_header(title, subtitle=None, count=None, search_id=None, search_placeholder=None, search_value=None, filters=None) %}
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
         <h1 class="text-3xl font-bold text-white mb-2">{{ title }}</h1>
@@ -17,6 +17,7 @@
         <!-- Search -->
         <div class="relative" style="width: 16rem;">
             <input type="text" id="{{ search_id }}" placeholder="{{ search_placeholder or 'Search...' }}" 
+                   value="{{ search_value or '' }}"
                    class="input-modern" style="padding-left: 2.5rem;">
             <div style="position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; padding-left: 0.75rem;">
                 <svg style="width: 1.25rem; height: 1.25rem; color: var(--color-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
