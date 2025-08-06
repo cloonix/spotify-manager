@@ -54,7 +54,6 @@
             <!-- Sort Options -->
             <select id="sortFilter" class="input-modern">
                 <option value="name">Sort by Name</option>
-                <option value="genre">Sort by Genre</option>
                 <option value="recent">Recently Added</option>
             </select>
         </div>
@@ -78,7 +77,8 @@
                     <tr class="artist-item hover:bg-dark-700 transition-colors" 
                         data-name="{{ artist.name|lower }}" 
                         data-genres="{{ artist.genres|default('')|lower }}"
-                        data-letter="{{ artist.name[0]|upper if artist.name else 'A' }}">
+                        data-letter="{{ artist.name[0]|upper if artist.name else 'A' }}"
+                        data-index="{{ loop.index }}">
                         
                         <td>
                             {% if artist.image_url %}
@@ -281,11 +281,11 @@ class ArtistManager {
             switch (sortType) {
                 case 'name':
                     return (a.dataset.name || '').localeCompare(b.dataset.name || '');
-                case 'genre':
-                    return (a.dataset.genres || '').localeCompare(b.dataset.genres || '');
                 case 'recent':
-                    // For now, keep original order (could add timestamp later)
-                    return 0;
+                    // Sort by index in reverse order (higher index = more recently added)
+                    const aIndex = parseInt(a.dataset.index || '0');
+                    const bIndex = parseInt(b.dataset.index || '0');
+                    return bIndex - aIndex; // Reverse order for most recent first
                 default:
                     return 0;
             }
