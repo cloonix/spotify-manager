@@ -86,6 +86,15 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                     </svg>
                                 </a>
+                                {% if item.type == 'album' %}
+                                <button onclick="viewAlbumDetails('{{ item.id }}')"
+                                        class="text-gray-400 hover:text-blue-400 transition-colors p-1 rounded"
+                                        title="View album details">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
                                 {{ delete_button(item.type, item.id) }}
                             </div>
                         </td>
@@ -105,5 +114,25 @@
     {% endif %}
 </div>
 
+<!-- Album Details Modal -->
+<div id="albumModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"></div>
+        
+        <div class="inline-block align-bottom bg-dark-700 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-dark-700 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div id="albumDetails">
+                    <!-- Album details will be loaded here -->
+                </div>
+            </div>
+            <div class="bg-dark-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button onclick="document.getElementById('albumModal').classList.add('hidden')" 
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-dark-600 text-base font-medium text-white hover:bg-dark-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-spotify sm:ml-3 sm:w-auto sm:text-sm">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

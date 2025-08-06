@@ -19,7 +19,8 @@ def create_tables():
                 name TEXT NOT NULL,
                 genres TEXT,
                 uri TEXT,
-                url TEXT
+                url TEXT,
+                image_url TEXT
             );
             
             CREATE TABLE IF NOT EXISTS Albums (
@@ -46,15 +47,34 @@ def create_tables():
             CREATE INDEX IF NOT EXISTS idx_albums_artist ON Albums(artist_id);
             CREATE INDEX IF NOT EXISTS idx_tracks_artist ON Tracks(artist_id);
         ''')
+        
+        # Migration: Add image_url column if it doesn't exist
+        try:
+            conn.execute("ALTER TABLE Artists ADD COLUMN image_url TEXT")
+        except:
+            pass  # Column already exists
 
 def add_artist(artist_info):
     """Insert or update artist with genres as comma-separated string."""
     with get_connection() as conn:
         genres_str = ", ".join(artist_info.get("genres", []))
+        # Get the best image URL (medium size preferred, fallback to largest available)
+        images = artist_info.get("images", [])
+        image_url = ""
+        if images:
+            # Sort by size, prefer medium size (~320px) or largest available
+            sorted_images = sorted(images, key=lambda x: x.get("width", 0), reverse=True)
+            image_url = sorted_images[0].get("url", "")
+            # Prefer medium size if available (around 300-400px)
+            for img in sorted_images:
+                if 200 <= img.get("width", 0) <= 500:
+                    image_url = img.get("url", "")
+                    break
+        
         conn.execute(
-            "INSERT OR REPLACE INTO Artists (id, name, genres, uri, url) VALUES (?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO Artists (id, name, genres, uri, url, image_url) VALUES (?, ?, ?, ?, ?, ?)",
             (artist_info["artist_id"], artist_info["artist_name"], genres_str, 
-             artist_info["uri"], artist_info["external_urls"].get("spotify", ""))
+             artist_info["uri"], artist_info["external_urls"].get("spotify", ""), image_url)
         )
 
 def add_album(album_info):
@@ -99,6 +119,56 @@ def get_artists():
     with get_connection() as conn:
         return [dict(row) for row in conn.execute("SELECT * FROM Artists ORDER BY name").fetchall()]
 
+def get_artist_by_id(artist_id):
+    """Get a single artist by ID."""
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM Artists WHERE id = ?", (artist_id,)).fetchone()
+        return dict(row) if row else None
+
+def get_albums():
+    """Get all albums."""
+    with get_connection() as conn:
+        return [dict(row) for row in conn.execute("""
+            SELECT a.*, ar.name as artist_name 
+            FROM Albums a 
+            JOIN Artists ar ON a.artist_id = ar.id 
+            ORDER BY ar.name, a.name
+        """).fetchall()]
+
+def get_album_by_id(album_id):
+    """Get a single album by ID."""
+    with get_connection() as conn:
+        row = conn.execute("""
+            SELECT a.*, ar.name as artist_name 
+            FROM Albums a 
+            JOIN Artists ar ON a.artist_id = ar.id 
+            WHERE a.id = ?
+        """, (album_id,)).fetchone()
+        return dict(row) if row else None
+
+def album_has_tracks(album_id):
+    """Check if an album has any tracks in the database."""
+    with get_connection() as conn:
+        track_count = conn.execute("SELECT COUNT(*) as count FROM Tracks WHERE album_id = ?", (album_id,)).fetchone()['count']
+        return track_count > 0
+
+def delete_album(album_id):
+    """Delete an album by ID."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM Albums WHERE id = ?", (album_id,))
+
+def artist_has_content(artist_id):
+    """Check if an artist has any tracks or albums in the database."""
+    with get_connection() as conn:
+        track_count = conn.execute("SELECT COUNT(*) as count FROM Tracks WHERE artist_id = ?", (artist_id,)).fetchone()['count']
+        album_count = conn.execute("SELECT COUNT(*) as count FROM Albums WHERE artist_id = ?", (artist_id,)).fetchone()['count']
+        return track_count > 0 or album_count > 0
+
+def delete_artist(artist_id):
+    """Delete an artist by ID."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM Artists WHERE id = ?", (artist_id,))
+
 def delete_item(item_id, item_type):
     """Delete album or track by ID."""
     table = "Albums" if item_type == "album" else "Tracks"
@@ -111,7 +181,7 @@ def export_database_csv():
     tables = {
         "artists": ["id", "name", "genres", "uri", "url"],
         "albums": ["id", "artist_id", "name", "release_year", "uri", "url"],
-        "tracks": ["id", "artist_id", "album_id", "name", "release_year", "uri", "url"],
+        "tracks": ["id", "artist_id", "album_id", "name", "release_year", "uri", "url"]
     }
     
     try:

@@ -24,7 +24,7 @@ def get_spotify_oauth():
         client_id=os.getenv("SPOTIPY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:5000/callback"),
-        scope="user-follow-read user-library-read"
+        scope="user-follow-read user-library-read user-follow-modify user-library-modify"
     )
 
 def get_user_spotify():
@@ -51,7 +51,8 @@ def extract_spotify_info(url):
                 "artist_name": artist_data["name"],
                 "genres": artist_data["genres"],
                 "uri": artist_data["uri"],
-                "external_urls": artist_data["external_urls"]
+                "external_urls": artist_data["external_urls"],
+                "images": artist_data.get("images", [])
             }
         
         if "/album/" in url:
@@ -136,10 +137,40 @@ def add_item():
 
 @app.route("/delete/<item_type>/<item_id>", methods=["POST"])
 def delete_item(item_type, item_id):
-    """Delete item via AJAX."""
+    """Delete item locally and remove from Spotify to maintain sync."""
     try:
+        # Get item name for better messaging
+        item_name = "Unknown"
+        if item_type == 'album':
+            album = database.get_album_by_id(item_id)
+            if album:
+                item_name = f"{album['name']} by {album['artist_name']}"
+        
+        # Try to remove from Spotify first to maintain sync
+        user_sp = get_user_spotify()
+        spotify_removed = False
+        
+        if user_sp:
+            try:
+                if item_type == 'album':
+                    user_sp.current_user_saved_albums_delete([item_id])
+                    spotify_removed = True
+                elif item_type == 'track':
+                    user_sp.current_user_saved_tracks_delete([item_id])
+                    spotify_removed = True
+            except Exception:
+                # Continue with local deletion even if Spotify fails
+                pass
+        
+        # Always delete locally
         database.delete_item(item_id, item_type)
-        return jsonify({"success": f"{item_type.title()} deleted successfully"})
+        
+        # Provide appropriate feedback
+        if spotify_removed:
+            return jsonify({"success": f"{item_type.title()} '{item_name}' removed from both local database and Spotify library"})
+        else:
+            return jsonify({"success": f"{item_type.title()} '{item_name}' deleted locally", "warning": "Could not remove from Spotify - please sync to maintain consistency"})
+            
     except Exception as e:
         return jsonify({"error": f"Error deleting {item_type}: {str(e)}"}), 500
 
@@ -229,33 +260,36 @@ def logout():
 
 @app.route("/sync-followed-artists", methods=["POST"])
 def sync_followed_artists():
-    """Sync user's followed artists from Spotify."""
+    """Sync user's followed artists from Spotify with proper bi-directional sync."""
     user_sp = get_user_spotify()
     if not user_sp:
         return jsonify({"error": "Please login with Spotify first"}), 401
     
     try:
-        added_count = 0
+        # Get all currently followed artists from Spotify
+        spotify_artist_ids = set()
         results = user_sp.current_user_followed_artists(limit=50)
         
+        # Collect all followed artist IDs from Spotify
         while results:
             for artist in results['artists']['items']:
+                spotify_artist_ids.add(artist["id"])
+                
                 # Build artist info structure
                 artist_info = {
                     "artist_id": artist["id"],
                     "artist_name": artist["name"],
                     "genres": artist["genres"],
                     "uri": artist["uri"],
-                    "external_urls": artist["external_urls"]
+                    "external_urls": artist["external_urls"],
+                    "images": artist.get("images", [])
                 }
                 
-                # Add to database (will skip if already exists)
+                # Add/update artist in database
                 try:
                     database.add_artist(artist_info)
-                    added_count += 1
                 except Exception:
-                    # Artist might already exist, continue
-                    pass
+                    pass  # Continue if there's an issue with this artist
             
             # Get next page if available
             if results['artists']['next']:
@@ -263,25 +297,62 @@ def sync_followed_artists():
             else:
                 break
         
-        return jsonify({"success": f"Synced {added_count} followed artists from Spotify"})
+        # Get all artists currently in local database
+        local_artists = database.get_artists()
+        local_artist_ids = {artist['id'] for artist in local_artists}
+        
+        # Find artists that are in local database but not followed on Spotify anymore
+        unfollowed_artist_ids = local_artist_ids - spotify_artist_ids
+        
+        # Remove unfollowed artists, but only if they're not linked to any tracks/albums
+        removed_count = 0
+        for artist_id in unfollowed_artist_ids:
+            # Check if artist has any tracks or albums in the database
+            if not database.artist_has_content(artist_id):
+                try:
+                    database.delete_artist(artist_id)
+                    removed_count += 1
+                except Exception:
+                    pass  # Continue if there's an issue removing this artist
+        
+        added_count = len(spotify_artist_ids - local_artist_ids)
+        
+        # Build response message
+        message_parts = []
+        if added_count > 0:
+            message_parts.append(f"Added {added_count} new artists")
+        if removed_count > 0:
+            message_parts.append(f"removed {removed_count} unfollowed artists")
+        
+        if message_parts:
+            message = "Sync complete: " + " and ".join(message_parts)
+        else:
+            message = "Artists already in sync - no changes needed"
+            
+        return jsonify({"success": message})
     
     except Exception as e:
         return jsonify({"error": f"Error syncing artists: {str(e)}"}), 500
 
 @app.route("/sync-saved-albums", methods=["POST"])
 def sync_saved_albums():
-    """Sync user's saved albums from Spotify."""
+    """Sync user's saved albums from Spotify with proper bi-directional sync."""
     user_sp = get_user_spotify()
     if not user_sp:
         return jsonify({"error": "Please login with Spotify first"}), 401
     
     try:
-        added_count = 0
+        # Get all currently saved albums from Spotify
+        spotify_album_ids = set()
         results = user_sp.current_user_saved_albums(limit=50)
         
+        # Collect all saved album IDs from Spotify
         while results:
             for item in results['items']:
                 album = item['album']
+                album_id = album["id"]
+                spotify_album_ids.add(album_id)
+                
                 # Get artist details for genres
                 artist = sp.artist(album["artists"][0]["id"])
                 
@@ -300,7 +371,8 @@ def sync_saved_albums():
                         "artist_name": artist["name"],
                         "genres": artist["genres"],
                         "uri": artist["uri"],
-                        "external_urls": artist["external_urls"]
+                        "external_urls": artist["external_urls"],
+                        "images": artist.get("images", [])
                     }
                 }
                 
@@ -309,10 +381,8 @@ def sync_saved_albums():
                     database.add_artist(album_info["artist_info"])
                     # Add album
                     database.add_album(album_info)
-                    added_count += 1
                 except Exception:
-                    # Album might already exist, continue
-                    pass
+                    pass  # Continue if there's an issue with this album
             
             # Get next page if available
             if results['next']:
@@ -320,7 +390,39 @@ def sync_saved_albums():
             else:
                 break
         
-        return jsonify({"success": f"Synced {added_count} saved albums from Spotify"})
+        # Get all albums currently in local database
+        local_albums = database.get_albums()
+        local_album_ids = {album['id'] for album in local_albums}
+        
+        # Find albums that are in local database but not saved on Spotify anymore
+        unsaved_album_ids = local_album_ids - spotify_album_ids
+        
+        # Remove unsaved albums, but only if they don't have any tracks in database
+        removed_count = 0
+        for album_id in unsaved_album_ids:
+            # Check if album has any tracks in the database
+            if not database.album_has_tracks(album_id):
+                try:
+                    database.delete_album(album_id)
+                    removed_count += 1
+                except Exception:
+                    pass  # Continue if there's an issue removing this album
+        
+        added_count = len(spotify_album_ids - local_album_ids)
+        
+        # Build response message
+        message_parts = []
+        if added_count > 0:
+            message_parts.append(f"Added {added_count} new albums")
+        if removed_count > 0:
+            message_parts.append(f"removed {removed_count} unsaved albums")
+        
+        if message_parts:
+            message = "Sync complete: " + " and ".join(message_parts)
+        else:
+            message = "Albums already in sync - no changes needed"
+        
+        return jsonify({"success": message})
     
     except Exception as e:
         return jsonify({"error": f"Error syncing albums: {str(e)}"}), 500
@@ -358,7 +460,8 @@ def sync_saved_tracks():
                         "artist_name": artist["name"],
                         "genres": artist["genres"],
                         "uri": artist["uri"],
-                        "external_urls": artist["external_urls"]
+                        "external_urls": artist["external_urls"],
+                        "images": artist.get("images", [])
                     }
                 }
                 
@@ -395,16 +498,19 @@ def sync_all_spotify():
         total_albums = 0
         total_tracks = 0
         
-        # Sync followed artists
+        # Sync followed artists with bi-directional sync
+        spotify_artist_ids = set()
         results = user_sp.current_user_followed_artists(limit=50)
         while results:
             for artist in results['artists']['items']:
+                spotify_artist_ids.add(artist["id"])
                 artist_info = {
                     "artist_id": artist["id"],
                     "artist_name": artist["name"],
                     "genres": artist["genres"],
                     "uri": artist["uri"],
-                    "external_urls": artist["external_urls"]
+                    "external_urls": artist["external_urls"],
+                    "images": artist.get("images", [])
                 }
                 try:
                     database.add_artist(artist_info)
@@ -416,11 +522,28 @@ def sync_all_spotify():
             else:
                 break
         
-        # Sync saved albums
+        # Remove unfollowed artists (only if they have no tracks/albums)
+        local_artists = database.get_artists()
+        local_artist_ids = {artist['id'] for artist in local_artists}
+        unfollowed_artist_ids = local_artist_ids - spotify_artist_ids
+        
+        removed_artists = 0
+        for artist_id in unfollowed_artist_ids:
+            if not database.artist_has_content(artist_id):
+                try:
+                    database.delete_artist(artist_id)
+                    removed_artists += 1
+                except Exception:
+                    pass
+        
+        # Sync saved albums with bi-directional sync
+        spotify_album_ids = set()
         results = user_sp.current_user_saved_albums(limit=50)
         while results:
             for item in results['items']:
                 album = item['album']
+                album_id = album["id"]
+                spotify_album_ids.add(album_id)
                 artist = sp.artist(album["artists"][0]["id"])
                 album_info = {
                     "type": "album",
@@ -436,7 +559,8 @@ def sync_all_spotify():
                         "artist_name": artist["name"],
                         "genres": artist["genres"],
                         "uri": artist["uri"],
-                        "external_urls": artist["external_urls"]
+                        "external_urls": artist["external_urls"],
+                        "images": artist.get("images", [])
                     }
                 }
                 try:
@@ -449,6 +573,20 @@ def sync_all_spotify():
                 results = user_sp.next(results)
             else:
                 break
+        
+        # Remove unsaved albums (only if they have no tracks)
+        local_albums = database.get_albums()
+        local_album_ids = {album['id'] for album in local_albums}
+        unsaved_album_ids = local_album_ids - spotify_album_ids
+        
+        removed_albums = 0
+        for album_id in unsaved_album_ids:
+            if not database.album_has_tracks(album_id):
+                try:
+                    database.delete_album(album_id)
+                    removed_albums += 1
+                except Exception:
+                    pass
         
         # Sync saved tracks
         results = user_sp.current_user_saved_tracks(limit=50)
@@ -471,7 +609,8 @@ def sync_all_spotify():
                         "artist_name": artist["name"],
                         "genres": artist["genres"],
                         "uri": artist["uri"],
-                        "external_urls": artist["external_urls"]
+                        "external_urls": artist["external_urls"],
+                        "images": artist.get("images", [])
                     }
                 }
                 try:
@@ -485,12 +624,132 @@ def sync_all_spotify():
             else:
                 break
         
+        message_parts = [f"Added {total_artists} artists", f"{total_albums} albums", f"{total_tracks} tracks"]
+        if removed_artists > 0:
+            message_parts.append(f"removed {removed_artists} unfollowed artists")
+        if removed_albums > 0:
+            message_parts.append(f"removed {removed_albums} unsaved albums")
+        
         return jsonify({
-            "success": f"Full sync complete! Added {total_artists} artists, {total_albums} albums, {total_tracks} tracks"
+            "success": f"Full sync complete! {', '.join(message_parts)}"
         })
     
     except Exception as e:
         return jsonify({"error": f"Error during full sync: {str(e)}"}), 500
+
+@app.route("/unfollow-artist/<artist_id>", methods=["POST"])
+def unfollow_artist(artist_id):
+    """Unfollow an artist on Spotify."""
+    user_sp = get_user_spotify()
+    if not user_sp:
+        return jsonify({"error": "Please login with Spotify first"}), 401
+    
+    try:
+        # Get artist name for response message
+        artist = database.get_artist_by_id(artist_id)
+        artist_name = artist['name'] if artist else "Unknown Artist"
+        
+        # Unfollow on Spotify
+        user_sp.user_unfollow_artists([artist_id])
+        
+        return jsonify({"success": f"Successfully unfollowed {artist_name} on Spotify"})
+    
+    except Exception as e:
+        return jsonify({"error": f"Error unfollowing artist: {str(e)}"}), 500
+
+@app.route("/unsave-album/<album_id>", methods=["POST"])
+def unsave_album(album_id):
+    """Unsave an album on Spotify."""
+    user_sp = get_user_spotify()
+    if not user_sp:
+        return jsonify({"error": "Please login with Spotify first"}), 401
+    
+    try:
+        # Get album name for response message
+        album = database.get_album_by_id(album_id)
+        album_name = f"{album['name']} by {album['artist_name']}" if album else "Unknown Album"
+        
+        # Unsave on Spotify
+        user_sp.current_user_saved_albums_delete([album_id])
+        
+        return jsonify({"success": f"Successfully removed {album_name} from saved albums"})
+    
+    except Exception as e:
+        return jsonify({"error": f"Error unsaving album: {str(e)}"}), 500
+
+@app.route("/artist-details/<artist_id>")
+def get_artist_details(artist_id):
+    """Get detailed artist information."""
+    try:
+        # Get artist from database
+        artist = database.get_artist_by_id(artist_id)
+        if not artist:
+            return jsonify({"error": "Artist not found"}), 404
+        
+        # Get fresh data from Spotify API for more details
+        fresh_artist = sp.artist(artist_id)
+        
+        # Get user's follow status if logged in
+        user_sp = get_user_spotify()
+        is_following = False
+        if user_sp:
+            try:
+                following_result = user_sp.current_user_following_artists([artist_id])
+                is_following = following_result[0] if following_result else False
+            except:
+                pass  # Not critical if this fails
+        
+        return jsonify({
+            "id": artist['id'],
+            "name": artist['name'],
+            "genres": artist['genres'],
+            "image_url": artist.get('image_url', ''),
+            "spotify_url": artist['url'],
+            "followers": fresh_artist.get('followers', {}).get('total', 0),
+            "popularity": fresh_artist.get('popularity', 0),
+            "is_following": is_following
+        })
+    
+    except Exception as e:
+        return jsonify({"error": f"Error getting artist details: {str(e)}"}), 500
+
+@app.route("/album-details/<album_id>")
+def get_album_details(album_id):
+    """Get detailed album information."""
+    try:
+        # Get album from database
+        album = database.get_album_by_id(album_id)
+        if not album:
+            return jsonify({"error": "Album not found"}), 404
+        
+        # Get fresh data from Spotify API for more details
+        fresh_album = sp.album(album_id)
+        
+        # Get user's saved status if logged in
+        user_sp = get_user_spotify()
+        is_saved = False
+        if user_sp:
+            try:
+                saved_result = user_sp.current_user_saved_albums_contains([album_id])
+                is_saved = saved_result[0] if saved_result else False
+            except:
+                pass  # Not critical if this fails
+        
+        return jsonify({
+            "id": album['id'],
+            "name": album['name'],
+            "artist_name": album['artist_name'],
+            "artist_id": album['artist_id'],
+            "release_year": album['release_year'],
+            "spotify_url": album['url'],
+            "image_url": fresh_album.get('images', [{}])[0].get('url', '') if fresh_album.get('images') else '',
+            "total_tracks": fresh_album.get('total_tracks', 0),
+            "popularity": fresh_album.get('popularity', 0),
+            "is_saved": is_saved
+        })
+    
+    except Exception as e:
+        return jsonify({"error": f"Error getting album details: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
