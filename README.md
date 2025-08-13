@@ -1,4 +1,4 @@
-# 🎵 Spotify Manager
+# 🎵 Spotify Manager (update)
 
 A modern, lightweight web application for organizing and managing your favorite Spotify tracks, albums, and artists. Built with Flask, featuring a beautiful dark theme and intuitive user interface.
 
