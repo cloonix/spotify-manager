@@ -1,4 +1,4 @@
-# spotify-manager
+# spotify-manager (update)
 
 A python application to manage spotify albums and tracks using the Spotify API
 
